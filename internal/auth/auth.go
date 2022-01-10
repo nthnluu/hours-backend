@@ -1,6 +1,11 @@
 package auth
 
-import "log"
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"queue/internal/firebase"
+)
 
 var repository Repository
 
@@ -45,6 +50,26 @@ func UpdateUser(user *UpdateUserRequest) (*User, error) {
 func DeleteUser(user *User) (*User, error) {
 	err := repository.Delete(user.ID)
 	return user, err
+}
+
+// VerifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.
+func VerifySessionCookie(sessionCookie *http.Cookie) (*User, error) {
+	authClient, err := firebase.FirebaseApp.Auth(firebase.FirebaseContext)
+	if err != nil {
+		log.Fatalf("error getting Auth client: %v\n", err)
+	}
+
+	decoded, err := authClient.VerifySessionCookieAndCheckRevoked(firebase.FirebaseContext, sessionCookie.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error verifying cookie: %v\n", err)
+	}
+
+	user, err := GetUserByID(decoded.UID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting user from cookie: %v\n", err)
+	}
+
+	return user, nil
 }
 
 func init() {

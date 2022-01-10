@@ -17,3 +17,7 @@ TODO(nthnluu): will write docs
 │       └── server.go     // contains the http server. routes exported from a package should be mounted here.
 └── main.go
 ```
+
+## remarks
+- users without a valid @brown.edu email are automatically deleted from Firebase authentication.
+- the first registered user will automatically be made admin.

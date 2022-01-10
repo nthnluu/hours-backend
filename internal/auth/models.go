@@ -12,6 +12,7 @@ type Profile struct {
 	Email       string `json:"email" mapstructure:"email"`
 	PhoneNumber string `json:"phoneNumber,omitempty" mapstructure:"phoneNumber"`
 	PhotoURL    string `json:"photoUrl" mapstructure:"photoUrl"`
+	IsAdmin     bool   `json:"isAdmin" mapstructure:"isAdmin"`
 }
 
 // User represents a registered user.
@@ -21,7 +22,6 @@ type User struct {
 	Disabled           bool
 	CreationTimestamp  int64
 	LastLogInTimestamp int64
-	Role               string
 }
 
 // CreateUserRequest is the parameter struct for the CreateUser function.

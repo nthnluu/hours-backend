@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 	"log"
 	"queue/internal/firebase"
+	"strings"
 	"sync"
 )
 
@@ -83,9 +84,35 @@ func (r firebaseRepository) Get(id string) (*User, error) {
 		return nil, UserNotFoundError
 	}
 
+	// TODO: Refactor email verification and user profile creation into separate function.
+
+	// Check if the Firebase user has a valid Brown email address
+	if strings.Split(fbUser.Email, "@")[1] != "brown.edu" {
+		// invalid brown email, delete the user from Firebase Auth
+		_ = r.authClient.DeleteUser(firebase.FirebaseContext, fbUser.UID)
+		return nil, InvalidEmailError
+	}
+
 	profile, err := r.getUserProfile(fbUser.UID)
 	if err != nil {
-		return nil, UserProfileNotFoundError
+		// no profile for the user found, create one.
+		profile = &Profile{
+			DisplayName: fbUser.DisplayName,
+			Email:       fbUser.Email,
+			PhoneNumber: "",
+			PhotoURL:    "",
+			// if there are no registered users, make the first one an admin
+			IsAdmin: r.getUserCount() == 0,
+		}
+		_, err = r.firestoreClient.Collection(FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
+			"displayName": profile.DisplayName,
+			"email":       profile.Email,
+			"id":          fbUser.UID,
+			"isAdmin":     profile.IsAdmin,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error creating user profile: %v\n", err)
+		}
 	}
 
 	return fbUserToUserRecord(fbUser, profile), nil
@@ -217,6 +244,7 @@ func (r firebaseRepository) startUserProfilesListener() error {
 
 // fbUserToUserRecord combines a Firebase UserRecord and a Profile into a User
 func fbUserToUserRecord(fbUser *firebaseAuth.UserRecord, profile *Profile) *User {
+	// TODO: Refactor such that displayName, email, and profile photo are pulled from firebase auth and not the user profile stored in Firestore.
 	return &User{
 		ID:                 fbUser.UID,
 		Profile:            profile,
@@ -236,4 +264,12 @@ func (r firebaseRepository) getUserProfile(id string) (*Profile, error) {
 	} else {
 		return nil, fmt.Errorf("No profile found for ID %v\n", id)
 	}
+}
+
+// getUserCount returns the number of user profiles.
+func (r firebaseRepository) getUserCount() int {
+	r.profilesLock.RLock()
+	defer r.profilesLock.RUnlock()
+
+	return len(r.profiles)
 }

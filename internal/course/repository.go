@@ -17,7 +17,7 @@ import (
 // Repository encapsulates the logic to access courses from a database.
 type Repository interface {
 	// Get returns the course corresponding to the specified course ID.
-	Get(id string) (*Course, error)
+	Get(course *GetCourseRequest) (*Course, error)
 	// Create saves a new course into the database.
 	Create(course *CreateCourseRequest) (*Course, error)
 }
@@ -100,8 +100,8 @@ func (r *firebaseRepository) Create(c *CreateCourseRequest) (course *Course, err
 	return
 }
 
-func (r *firebaseRepository) Get(id string) (*Course, error) {
-	course, err := r.getCourse(id)
+func (r *firebaseRepository) Get(c *GetCourseRequest) (*Course, error) {
+	course, err := r.getCourse(c.CourseID)
 	if err != nil {
 		return nil, err
 	}

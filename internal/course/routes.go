@@ -10,8 +10,21 @@ import (
 
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
+	router.Get("/{courseID}", getCourseHandler)
 	router.With(auth.RequireAuth(true)).Post("/", createCourseHandler)
 	return router
+}
+
+func getCourseHandler(w http.ResponseWriter, r *http.Request) {
+	courseID := chi.URLParam(r, "courseID")
+
+	course, err := GetCourse(&GetCourseRequest{courseID})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	render.JSON(w, r, course)
 }
 
 func createCourseHandler(w http.ResponseWriter, r *http.Request) {

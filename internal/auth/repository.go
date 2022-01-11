@@ -19,6 +19,8 @@ import (
 type Repository interface {
 	// Get returns the users corresponding to the specified user ID.
 	Get(id string) (*User, error)
+	// GetByEmail returns the user id to the specified email.
+	GetIDByEmail(email string) (string, error)
 	// Count returns the number of users.
 	Count() int
 	// List returns the list of all registered users.
@@ -180,6 +182,18 @@ func (r firebaseRepository) Delete(id string) error {
 }
 
 // Helpers
+
+func (r firebaseRepository) GetIDByEmail(email string) (string, error) {
+	// Get user by email.
+	iter := r.firestoreClient.Collection(FirestoreUserProfilesCollection).Where("email", "==", email).Documents(firebase.FirebaseContext)
+	doc, err := iter.Next()
+	if err != nil {
+		return "", err
+	}
+	// Cast.
+	data := doc.Data()
+	return data["id"].(string), nil
+}
 
 // startUserProfilesListener attaches a listener to the user_profiles collection and updates the
 // userProfiles map.

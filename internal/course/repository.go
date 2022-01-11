@@ -153,16 +153,23 @@ func (r *firebaseRepository) Edit(c *EditCourseRequest) error {
 }
 
 func (r *firebaseRepository) AddPermission(c *AddCoursePermissionRequest) error {
-	_, err := r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
+	// Get user by email.
+	user, err := auth.GetUserByEmail(c.Email)
+	if err != nil {
+		return err
+	}
+	// Set course-side permissions.
+	_, err = r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
 		{
-			Path: "coursePermissions." + c.UserID,
+			Path: "coursePermissions." + user.ID,
 			Value: c.Permission,
 		},
 	})
 	if err != nil {
 		return err
 	}
-	_, err = r.firestoreClient.Collection(auth.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+	// Set user-side permissions.
+	_, err = r.firestoreClient.Collection(auth.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
 		{
 			Path: "coursePermissions." + c.CourseID,
 			Value: c.Permission,

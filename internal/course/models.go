@@ -35,7 +35,7 @@ type EditCourseRequest struct {
 
 type AddCoursePermissionRequest struct {
 	CourseID  		string     `json:"courseID"`
-	UserID     		string     `json:"userID"`
+	Email     		string     `json:"email"`
 	Permission      string     `json:"permission"`
 }
 

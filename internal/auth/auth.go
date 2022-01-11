@@ -15,8 +15,16 @@ func GetUserByID(id string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return user, nil
+}
+
+// GetUserByID retrieves the User associated with the given ID.
+func GetUserByEmail(email string) (*User, error) {
+	userID, err := repository.GetIDByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	return GetUserByID(userID)
 }
 
 // verifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.

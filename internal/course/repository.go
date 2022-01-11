@@ -22,6 +22,12 @@ type Repository interface {
 	Create(course *CreateCourseRequest) (*Course, error)
 	// Delete deletes a new course from a database.
 	Delete(course *DeleteCourseRequest) error
+	// Edit edits a course's details.
+	Edit(c *EditCourseRequest) error
+	// AddPermission adds an admin to a course.
+	AddPermission(c *AddCoursePermissionRequest) error
+	// RemovePermission removes an admin from a course.
+	RemovePermission(c *RemoveCoursePermissionRequest) error
 }
 
 type firebaseRepository struct {
@@ -113,7 +119,6 @@ func (r *firebaseRepository) Delete(c *DeleteCourseRequest) error {
 	// Get this course's info.
 	course, err := r.getCourse(c.CourseID)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -126,14 +131,62 @@ func (r *firebaseRepository) Delete(c *DeleteCourseRequest) error {
 			},
 		})
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 	}
 
 	// Delete the course.
 	_, err = r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Delete(firebase.FirebaseContext)
-	fmt.Println(err)
+	return err
+}
+
+func (r *firebaseRepository) Edit(c *EditCourseRequest) error {
+	_, err := r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
+		{ Path: "title", Value: c.Title, },
+		{ Path: "term", Value: c.Term, },
+		{ Path: "code", Value: c.Code, },
+	})
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func (r *firebaseRepository) AddPermission(c *AddCoursePermissionRequest) error {
+	_, err := r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path: "coursePermissions." + c.UserID,
+			Value: c.Permission,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	_, err = r.firestoreClient.Collection(auth.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path: "coursePermissions." + c.CourseID,
+			Value: c.Permission,
+		},
+	})
+	return err
+}
+
+func (r *firebaseRepository) RemovePermission(c *RemoveCoursePermissionRequest) error {
+	_, err := r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path: "coursePermissions." + c.UserID,
+			Value: firestore.Delete,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	_, err = r.firestoreClient.Collection(auth.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path: "coursePermissions." + c.CourseID,
+			Value: firestore.Delete,
+		},
+	})
 	return err
 }
 

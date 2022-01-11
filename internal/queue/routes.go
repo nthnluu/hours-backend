@@ -11,8 +11,8 @@ import (
 
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
-	router.With(auth.RequireAuth(false)).Post("/", createQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/{queueID}", createTicketHandler)
+	router.With(auth.RequireAuth(false)).Post("/create", createQueueHandler)
+	router.With(auth.RequireAuth(false)).Post("/ticket/create/{queueID}", createTicketHandler)
 	return router
 }
 

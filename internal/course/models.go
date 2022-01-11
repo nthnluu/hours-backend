@@ -25,3 +25,21 @@ type CreateCourseRequest struct {
 type DeleteCourseRequest struct {
 	CourseID     string     `json:"courseID"`
 }
+
+type EditCourseRequest struct {
+	CourseID  string     `json:"courseID"`
+	Title     string     `json:"title"`
+	Code      string     `json:"code"`
+	Term      string     `json:"term"`
+}
+
+type AddCoursePermissionRequest struct {
+	CourseID  		string     `json:"courseID"`
+	UserID     		string     `json:"userID"`
+	Permission      string     `json:"permission"`
+}
+
+type RemoveCoursePermissionRequest struct {
+	CourseID  		string     `json:"courseID"`
+	UserID     		string     `json:"userID"`
+}

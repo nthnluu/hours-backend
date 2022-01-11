@@ -16,6 +16,16 @@ func GetCourse(course *GetCourseRequest) (*Course, error) {
 	return gottedCourse, nil
 }
 
+// GetCourseByID returns a course with the given ID.
+func GetCourseByID(id string) (*Course, error) {
+	course, err := repository.Get(&GetCourseRequest{id})
+	if err != nil {
+		return nil, err
+	}
+
+	return course, nil
+}
+
 // CreateCourse creates a course using the provided Title, Code, and Term.
 func CreateCourse(course *CreateCourseRequest) (*Course, error) {
 	createdCourse, err := repository.Create(course)
@@ -28,22 +38,22 @@ func CreateCourse(course *CreateCourseRequest) (*Course, error) {
 
 // GetCourse creates a course using the provided ID.
 func DeleteCourse(course *DeleteCourseRequest) error {
-	err := repository.Delete(course)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return repository.Delete(course)
 }
 
-// GetCourseByID returns a course with the given ID.
-func GetCourseByID(id string) (*Course, error) {
-	course, err := repository.Get(&GetCourseRequest{id})
-	if err != nil {
-		return nil, err
-	}
+// EditCourse edits an existing course's details.
+func EditCourse(course *EditCourseRequest) error {
+	return repository.Edit(course)
+}
 
-	return course, nil
+// AddCoursePermission adds a course admin.
+func AddCoursePermission(coursePemission *AddCoursePermissionRequest) error {
+	return repository.AddPermission(coursePemission)
+}
+
+// RemoveCoursePermission removes a course admin.
+func RemoveCoursePermission(coursePemission *RemoveCoursePermissionRequest) error {
+	return repository.RemovePermission(coursePemission)
 }
 
 func init() {

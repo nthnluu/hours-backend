@@ -5,14 +5,22 @@ import (
 	"strings"
 )
 
+type CoursePermission string
+
+const (
+	CourseAdmin CoursePermission = "ADMIN"
+	CourseStaff                  = "STAFF"
+)
+
 // Profile is a collection of standard profile information for a user.
 // This struct separates client-safe profile information from internal user metadata.
 type Profile struct {
-	DisplayName string `json:"displayName" mapstructure:"displayName"`
-	Email       string `json:"email" mapstructure:"email"`
-	PhoneNumber string `json:"phoneNumber,omitempty" mapstructure:"phoneNumber"`
-	PhotoURL    string `json:"photoUrl" mapstructure:"photoUrl"`
-	IsAdmin     bool   `json:"isAdmin" mapstructure:"isAdmin"`
+	DisplayName       string                      `json:"displayName" mapstructure:"displayName"`
+	Email             string                      `json:"email" mapstructure:"email"`
+	PhoneNumber       string                      `json:"phoneNumber,omitempty" mapstructure:"phoneNumber"`
+	PhotoURL          string                      `json:"photoUrl" mapstructure:"photoUrl"`
+	IsAdmin           bool                        `json:"isAdmin" mapstructure:"isAdmin"`
+	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions"`
 }
 
 // User represents a registered user.

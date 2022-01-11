@@ -23,8 +23,6 @@ type Repository interface {
 	Count() int
 	// List returns the list of all registered users.
 	List() ([]*User, error)
-	// Create saves a new user into the database.
-	Create(user *CreateUserRequest) (*User, error)
 	// Update updates the user with given ID in the database.
 	Update(user *UpdateUserRequest) (*User, error)
 	// Delete removes the user with given ID from the database.
@@ -111,13 +109,15 @@ func (r firebaseRepository) Get(id string) (*User, error) {
 			PhoneNumber: "",
 			PhotoURL:    "",
 			// if there are no registered users, make the first one an admin
-			IsAdmin: r.getUserCount() == 0,
+			IsAdmin:           r.getUserCount() == 0,
+			CoursePermissions: map[string]CoursePermission{},
 		}
 		_, err = r.firestoreClient.Collection(FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
-			"displayName": profile.DisplayName,
-			"email":       profile.Email,
-			"id":          fbUser.UID,
-			"isAdmin":     profile.IsAdmin,
+			"displayName":       profile.DisplayName,
+			"email":             profile.Email,
+			"id":                fbUser.UID,
+			"isAdmin":           profile.IsAdmin,
+			"coursePermissions": profile.CoursePermissions,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error creating user profile: %v\n", err)
@@ -157,39 +157,7 @@ func (r firebaseRepository) List() ([]*User, error) {
 
 // Operations
 
-func (r firebaseRepository) Create(user *CreateUserRequest) (*User, error) {
-	if err := user.Validate(); err != nil {
-		return nil, err
-	}
-
-	// Create a user in Firebase Auth.
-	u := (&firebaseAuth.UserToCreate{}).Email(user.Email).Password(user.Password)
-	fbUser, err := r.authClient.CreateUser(firebase.FirebaseContext, u)
-	if err != nil {
-		return nil, fmt.Errorf("error creating user: %v\n", err)
-	}
-
-	// Create a user profile in Firestore.
-	profile := &Profile{
-		DisplayName: user.DisplayName,
-		Email:       user.Email,
-		PhoneNumber: "",
-		PhotoURL:    "",
-	}
-	_, err = r.firestoreClient.Collection(FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
-		"permissions": []string{},
-		"displayName": profile.DisplayName,
-		"email":       profile.Email,
-		"id":          fbUser.UID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating user profile: %v\n", err)
-	}
-
-	return fbUserToUserRecord(fbUser, profile), nil
-}
-
-// TODO
+// TODO(n-young)
 func (r firebaseRepository) Update(user *UpdateUserRequest) (*User, error) {
 	return nil, nil
 }

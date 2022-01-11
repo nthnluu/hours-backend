@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
+	"signmeup/internal/auth"
 	"signmeup/internal/firebase"
 	"sync"
 	"time"
@@ -46,7 +47,6 @@ func NewFirebaseRepository() (Repository, error) {
 	repository.firestoreClient = firestoreClient
 
 	var wg sync.WaitGroup
-
 	wg.Add(1)
 	log.Println("⏳ Starting courses collection listener...")
 	go func() {
@@ -65,22 +65,38 @@ func NewFirebaseRepository() (Repository, error) {
 
 func (r *firebaseRepository) Create(c *CreateCourseRequest) (course *Course, err error) {
 	course = &Course{
-		Title:      c.Title,
-		Code:       c.Code,
-		Term:       c.Term,
-		IsArchived: false,
+		Title:             c.Title,
+		Code:              c.Code,
+		Term:              c.Term,
+		IsArchived:        false,
+		CoursePermissions: map[string]auth.CoursePermission{},
 	}
+
+	course.CoursePermissions[c.CreatedBy.ID] = auth.CourseAdmin
 	ref, _, err := r.firestoreClient.Collection(FirestoreCoursesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-		"title":      course.Title,
-		"code":       course.Code,
-		"term":       course.Term,
-		"isArchived": course.IsArchived,
+		"title":             course.Title,
+		"code":              course.Code,
+		"term":              course.Term,
+		"isArchived":        course.IsArchived,
+		"coursePermissions": course.CoursePermissions,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating course: %v\n", err)
 	}
-
 	course.ID = ref.ID
+
+	// update user profile to include new permission
+	// TODO(n-young): refactor when update user is implmted. :)
+	_, err = r.firestoreClient.Collection("user_profiles").Doc(c.CreatedBy.ID).Set(firebase.FirebaseContext, map[string]interface{}{
+		"coursePermissions": map[string]interface{}{
+			course.ID: auth.CourseAdmin,
+		},
+	}, firestore.MergeAll)
+	if err != nil {
+		// Handle any errors in an appropriate way, such as returning them.
+		return nil, err
+	}
+
 	return
 }
 

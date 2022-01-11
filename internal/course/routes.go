@@ -16,12 +16,17 @@ func Routes() *chi.Mux {
 
 func createCourseHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateCourseRequest
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
 
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	req.CreatedBy = user
 
 	course, err := CreateCourse(&req)
 	if err != nil {

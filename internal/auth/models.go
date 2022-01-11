@@ -58,8 +58,6 @@ func (u *CreateUserRequest) Validate() error {
 
 // UpdateUserRequest is the parameter struct for the UpdateUser function.
 type UpdateUserRequest struct {
-	Email       string `json:"email"`
-	Password    string `json:"password"`
 	DisplayName string `json:"displayName"`
 }
 

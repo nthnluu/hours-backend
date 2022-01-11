@@ -118,6 +118,7 @@ func (r firebaseRepository) Get(id string) (*User, error) {
 			"id":                fbUser.UID,
 			"isAdmin":           profile.IsAdmin,
 			"coursePermissions": profile.CoursePermissions,
+			"photoUrl": 		 fbUser.PhotoURL,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error creating user profile: %v\n", err)

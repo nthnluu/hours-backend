@@ -7,6 +7,16 @@ import (
 var repository Repository
 
 // CreateCourse creates a course using the provided Title, Code, and Term.
+func GetCourse(course *GetCourseRequest) (*Course, error) {
+	gottedCourse, err := repository.Get(course)
+	if err != nil {
+		return nil, err
+	}
+
+	return gottedCourse, nil
+}
+
+// CreateCourse creates a course using the provided Title, Code, and Term.
 func CreateCourse(course *CreateCourseRequest) (*Course, error) {
 	createdCourse, err := repository.Create(course)
 	if err != nil {
@@ -18,7 +28,7 @@ func CreateCourse(course *CreateCourseRequest) (*Course, error) {
 
 // GetCourseByID returns a course with the given ID.
 func GetCourseByID(id string) (*Course, error) {
-	course, err := repository.Get(id)
+	course, err := repository.Get(&GetCourseRequest{id})
 	if err != nil {
 		return nil, err
 	}

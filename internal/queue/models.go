@@ -40,8 +40,7 @@ type Ticket struct {
 
 // CreateTicketRequest is the parameter struct to the CreateTicket function.
 type CreateTicketRequest struct {
-	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	QueueID     string     `json:"queueID,omitempty"`
-	CreatedBy   *auth.User `json:"createdBy"`
+	CreatedBy   *auth.User `json:"createdBy,omitempty"`
 }

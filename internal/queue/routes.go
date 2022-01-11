@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"log"
 	"net/http"
 	"signmeup/internal/auth"
 )
@@ -36,16 +37,22 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateTicketRequest
 	queueID := chi.URLParam(r, "queueID")
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
 
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	req.QueueID = queueID
+	req.CreatedBy = user
 
 	ticket, err := CreateTicket(&req)
 	if err != nil {
+		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

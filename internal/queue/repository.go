@@ -11,6 +11,7 @@ import (
 	"signmeup/internal/course"
 	"signmeup/internal/firebase"
 	"sync"
+	"time"
 )
 
 // Repository encapsulates the logic to access queues from a database.
@@ -110,19 +111,19 @@ func (r *firebaseRepository) CreateTicket(c *CreateTicketRequest) (ticket *Ticke
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := r.firestoreClient.Collection(FirestoreQueuesCollection).Doc(queue.ID).Collection(FirestoreTicketsCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-		"createdBy": ticket.CreatedBy,
+		"createdBy": ticket.CreatedBy.Profile,
+		"createdAt": time.Now(),
 		"status":    ticket.Status,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating ticket: %v\n", err)
 	}
-	queue.ID = ref.ID
 
 	// Add ticket to the queue's ticket array
 	_, err = r.firestoreClient.Collection(FirestoreQueuesCollection).Doc(queue.ID).Update(firebase.FirebaseContext, []firestore.Update{
 		{
 			Path:  "tickets",
-			Value: append(queue.Tickets, queue.ID),
+			Value: append(queue.Tickets, ref.ID),
 		},
 	})
 	if err != nil {
@@ -186,6 +187,7 @@ func (r firebaseRepository) startQueuesListener(wg *sync.WaitGroup) error {
 					return err
 				}
 				queue.Course = c
+				queue.ID = doc.Ref.ID
 				r.queues[doc.Ref.ID] = &queue
 			}
 		}

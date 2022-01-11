@@ -12,11 +12,22 @@ import (
 
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
-	router.With(RequireAuth(false)).Get("/{userID}", getUserHandler)
 	router.With(RequireAuth(false)).Get("/me", getCurrentUserHandler)
+	router.With(RequireAuth(false)).Get("/{userID}", getUserHandler)
+	router.With(RequireAuth(true)).Post("/update/{userID}", updateUserHandler)
 	router.Post("/session", createSessionHandler)
 	router.Post("/signout", signOutHandler)
 	return router
+}
+
+func getCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	render.JSON(w, r, user.Profile)
 }
 
 func getUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +47,26 @@ func getUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	render.JSON(w, r, user)
+}
+
+func updateUserHandler(w http.ResponseWriter, r *http.Request) {
+	var req UpdateUserRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	req.ID = chi.URLParam(r, "userID")
+
+	err = UpdateUser(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully edited user " + req.ID))
 }
 
 func createSessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -79,16 +110,6 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("success"))
 	return
-}
-
-func getCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	render.JSON(w, r, user.Profile)
 }
 
 func signOutHandler(w http.ResponseWriter, r *http.Request) {

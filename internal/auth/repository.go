@@ -26,7 +26,7 @@ type Repository interface {
 	// List returns the list of all registered users.
 	List() ([]*User, error)
 	// Update updates the user with given ID in the database.
-	Update(user *UpdateUserRequest) (*User, error)
+	Update(user *UpdateUserRequest) error
 	// Delete removes the user with given ID from the database.
 	Delete(id string) error
 }
@@ -160,9 +160,27 @@ func (r firebaseRepository) List() ([]*User, error) {
 
 // Operations
 
-// TODO(n-young)
-func (r firebaseRepository) Update(user *UpdateUserRequest) (*User, error) {
-	return nil, nil
+func (r firebaseRepository) Update(user *UpdateUserRequest) error {
+	var err error
+	if user.DisplayName == "" {
+		_, err = r.firestoreClient.Collection(FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+			{
+				Path: "isAdmin",
+				Value: user.IsAdmin,
+			},
+		})
+	} else {
+		_, err = r.firestoreClient.Collection(FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+			{
+				Path: "displayName",
+				Value: user.DisplayName,
+			}, {
+				Path: "isAdmin",
+				Value: user.IsAdmin,
+			},
+		})
+	}
+	return err
 }
 
 func (r firebaseRepository) Delete(id string) error {

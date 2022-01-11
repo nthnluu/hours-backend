@@ -58,7 +58,9 @@ func (u *CreateUserRequest) Validate() error {
 
 // UpdateUserRequest is the parameter struct for the UpdateUser function.
 type UpdateUserRequest struct {
+	ID 			string `json:"id,omitempty"`
 	DisplayName string `json:"displayName"`
+	IsAdmin		bool `json:"isAdmin"`
 }
 
 // Validators.

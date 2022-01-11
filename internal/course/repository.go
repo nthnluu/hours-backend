@@ -146,9 +146,6 @@ func (r *firebaseRepository) Edit(c *EditCourseRequest) error {
 		{ Path: "term", Value: c.Term, },
 		{ Path: "code", Value: c.Code, },
 	})
-	if err != nil {
-		return err
-	}
 	return err
 }
 

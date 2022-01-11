@@ -6,18 +6,14 @@ import (
 	"github.com/go-chi/render"
 	"log"
 	"net/http"
-	"queue/internal/firebase"
-	"time"
+	"signmeup/internal/config"
+	"signmeup/internal/firebase"
 )
 
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
-	router.Get("/", getAllUsersHandler)
-	router.Post("/", createUserHandler)
-	router.Get("/{userID}", getUserHandler)
-	router.Delete("/{userID}", deleteUserHandler)
-
-	router.With(RequireAuth).Get("/me", getCurrentUserHandler)
+	router.With(RequireAuth(false)).Get("/{userID}", getUserHandler)
+	router.With(RequireAuth(false)).Get("/me", getCurrentUserHandler)
 	router.Post("/session", createSessionHandler)
 	router.Post("/signout", signOutHandler)
 	return router
@@ -42,41 +38,6 @@ func getUserHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, user)
 }
 
-func createUserHandler(w http.ResponseWriter, r *http.Request) {
-	user := User{
-		Profile:            nil,
-		ID:                 "",
-		Disabled:           false,
-		CreationTimestamp:  0,
-		LastLogInTimestamp: 0,
-	}
-	render.JSON(w, r, user)
-}
-
-// TODO
-func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	user := User{
-		Profile:            nil,
-		ID:                 "",
-		Disabled:           false,
-		CreationTimestamp:  0,
-		LastLogInTimestamp: 0,
-	}
-	render.JSON(w, r, user)
-}
-
-// TODO
-func getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
-	user := User{
-		Profile:            nil,
-		ID:                 "",
-		Disabled:           false,
-		CreationTimestamp:  0,
-		LastLogInTimestamp: 0,
-	}
-	render.JSON(w, r, user)
-}
-
 func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 	authClient, err := firebase.FirebaseApp.Auth(firebase.FirebaseContext)
 	if err != nil {
@@ -93,8 +54,8 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set session expiration to 90 days.
-	expiresIn := time.Hour * 24 * 14
+	// Set session expiration to 5 days.
+	expiresIn := config.Config.SessionCookieExpiration
 
 	// Create the session cookie. This will also verify the ID token in the process.
 	// The session cookie will have the same claims as the ID token.
@@ -107,7 +68,7 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "signmeup-session",
+		Name:     config.Config.SessionCookieName,
 		Value:    cookie,
 		MaxAge:   int(expiresIn.Seconds()),
 		HttpOnly: true,
@@ -121,14 +82,18 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
-	//get the authenticated user from the request context
-	user := r.Context().Value("currentUser").(*User)
+	user, err := GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	render.JSON(w, r, user.Profile)
 }
 
 func signOutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "signmeup-session",
+		Name:     config.Config.SessionCookieName,
 		Value:    "",
 		MaxAge:   -1,
 		HttpOnly: true,

@@ -12,7 +12,7 @@ var FirebaseContext context.Context
 
 func initializeFirebaseApp() {
 	ctx := context.Background()
-	opt := option.WithCredentialsFile("/Users/nathanluu/FullStackProjects/queue/signmeup-46c73-firebase-adminsdk-9mll6-d60aa0677c.json")
+	opt := option.WithCredentialsFile("signmeup-46c73-firebase-adminsdk-9mll6-d60aa0677c.json")
 	app, err := firebaseSDK.NewApp(ctx, nil, opt)
 	if err != nil {
 		panic(err.Error())

@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"queue/internal/firebase"
+	"signmeup/internal/firebase"
 )
 
 var repository Repository
 
+// GetUserByID retrieves the User associated with the given ID.
 func GetUserByID(id string) (*User, error) {
 	user, err := repository.Get(id)
 	if err != nil {
@@ -18,42 +19,8 @@ func GetUserByID(id string) (*User, error) {
 	return user, nil
 }
 
-func GetAllUsers() ([]*User, error) {
-	users, err := repository.List()
-	if err != nil {
-		return nil, err
-	}
-
-	return users, nil
-}
-
-// CreateUser creates a user using the provided Email, Password, and DisplayName.
-func CreateUser(user *CreateUserRequest) (*User, error) {
-	createdUser, err := repository.Create(user)
-	if err != nil {
-		return nil, EmailExistsError
-	}
-
-	return createdUser, nil
-}
-
-func UpdateUser(user *UpdateUserRequest) (*User, error) {
-	return &User{
-		Profile:            nil,
-		ID:                 "",
-		Disabled:           false,
-		CreationTimestamp:  0,
-		LastLogInTimestamp: 0,
-	}, nil
-}
-
-func DeleteUser(user *User) (*User, error) {
-	err := repository.Delete(user.ID)
-	return user, err
-}
-
-// VerifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.
-func VerifySessionCookie(sessionCookie *http.Cookie) (*User, error) {
+// verifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.
+func verifySessionCookie(sessionCookie *http.Cookie) (*User, error) {
 	authClient, err := firebase.FirebaseApp.Auth(firebase.FirebaseContext)
 	if err != nil {
 		log.Fatalf("error getting Auth client: %v\n", err)

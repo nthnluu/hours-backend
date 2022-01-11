@@ -21,3 +21,12 @@ TODO(nthnluu): will write docs
 ## remarks
 - users without a valid @brown.edu email are automatically deleted from Firebase authentication.
 - the first registered user will automatically be made admin.
+- ticket statuses are mapped to ints:
+  - 0: waiting
+  - 1: claimed
+  - 2: missing
+  - 3: complete
+- 
+## todo
+- lots of refactoring to do.
+- firestore collecction listners need concurrency things

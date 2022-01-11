@@ -1,6 +1,8 @@
 package main
 
-import "queue/internal/server"
+import (
+	"signmeup/internal/server"
+)
 
 func main() {
 	server.Start()

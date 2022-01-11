@@ -9,7 +9,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
-	"queue/internal/firebase"
+	"signmeup/internal/config"
+	"signmeup/internal/firebase"
 	"strings"
 	"sync"
 )
@@ -62,12 +63,17 @@ func NewFirebaseRepository() (Repository, error) {
 	}
 	repository.firestoreClient = firestoreClient
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	log.Println("⏳ Starting user_profiles collection listener...")
 	go func() {
-		err := repository.startUserProfilesListener()
+		err := repository.startUserProfilesListener(&wg)
 		if err != nil {
 			log.Fatalf("user profiles collection listner error: %v\n", err)
 		}
 	}()
+	wg.Wait()
 
 	return repository, nil
 }
@@ -86,11 +92,14 @@ func (r firebaseRepository) Get(id string) (*User, error) {
 
 	// TODO: Refactor email verification and user profile creation into separate function.
 
-	// Check if the Firebase user has a valid Brown email address
-	if strings.Split(fbUser.Email, "@")[1] != "brown.edu" {
-		// invalid brown email, delete the user from Firebase Auth
-		_ = r.authClient.DeleteUser(firebase.FirebaseContext, fbUser.UID)
-		return nil, InvalidEmailError
+	// Check the Firebase user's email against the list of allowed domains.
+	if len(config.Config.AllowedEmailDomains) > 0 {
+		domain := strings.Split(fbUser.Email, "@")[1]
+		if !contains(config.Config.AllowedEmailDomains, domain) {
+			// invalid email domain, delete the user from Firebase Auth
+			_ = r.authClient.DeleteUser(firebase.FirebaseContext, fbUser.UID)
+			return nil, InvalidEmailError
+		}
 	}
 
 	profile, err := r.getUserProfile(fbUser.UID)
@@ -207,8 +216,10 @@ func (r firebaseRepository) Delete(id string) error {
 // userProfiles map.
 // This allows us to keep an in-memory copy of the user_profiles Firestore collection, so we don't have to query
 // Firestore each time we need to access a profile.
-func (r firebaseRepository) startUserProfilesListener() error {
+func (r firebaseRepository) startUserProfilesListener(wg *sync.WaitGroup) error {
 	it := r.firestoreClient.Collection(FirestoreUserProfilesCollection).Snapshots(firebase.FirebaseContext)
+	var doOnce sync.Once
+
 	for {
 		snap, err := it.Next()
 		// DeadlineExceeded will be returned when ctx is cancelled.
@@ -219,9 +230,16 @@ func (r firebaseRepository) startUserProfilesListener() error {
 			return fmt.Errorf("Snapshots.Next: %v", err)
 		}
 		if snap != nil {
+			r.profilesLock.Lock()
+
 			for {
 				doc, err := snap.Documents.Next()
 				if err == iterator.Done {
+					doOnce.Do(func() {
+						log.Println("✅ Started user_profiles collection listener.")
+						wg.Done()
+					})
+					r.profilesLock.Unlock()
 					break
 				}
 				if err != nil {
@@ -233,10 +251,7 @@ func (r firebaseRepository) startUserProfilesListener() error {
 				if err != nil {
 					return err
 				}
-
-				r.profilesLock.Lock()
 				r.profiles[doc.Ref.ID] = &userProfile
-				r.profilesLock.Unlock()
 			}
 		}
 	}
@@ -272,4 +287,14 @@ func (r firebaseRepository) getUserCount() int {
 	defer r.profilesLock.RUnlock()
 
 	return len(r.profiles)
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }

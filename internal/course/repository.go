@@ -98,7 +98,7 @@ func (r *firebaseRepository) Create(c *CreateCourseRequest) (course *Course, err
 
 	// update user profile to include new permission
 	// TODO(n-young): refactor when update user is implmted. :)
-	_, err = r.firestoreClient.Collection("user_profiles").Doc(c.CreatedBy.ID).Set(firebase.FirebaseContext, map[string]interface{}{
+	_, err = r.firestoreClient.Collection(auth.FirestoreUserProfilesCollection).Doc(c.CreatedBy.ID).Set(firebase.FirebaseContext, map[string]interface{}{
 		"coursePermissions": map[string]interface{}{
 			course.ID: auth.CourseAdmin,
 		},
@@ -110,7 +110,30 @@ func (r *firebaseRepository) Create(c *CreateCourseRequest) (course *Course, err
 }
 
 func (r *firebaseRepository) Delete(c *DeleteCourseRequest) error {
-	_, err := r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Delete(firebase.FirebaseContext)
+	// Get this course's info.
+	course, err := r.getCourse(c.CourseID)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	// Delete this course from all users with permissions.
+	for k := range course.CoursePermissions {
+		_, err = r.firestoreClient.Collection(auth.FirestoreUserProfilesCollection).Doc(k).Update(firebase.FirebaseContext, []firestore.Update{
+			{
+				Path: "coursePermissions." + course.ID,
+				Value: firestore.Delete,
+			},
+		})
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+	}
+
+	// Delete the course.
+	_, err = r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Delete(firebase.FirebaseContext)
+	fmt.Println(err)
 	return err
 }
 

@@ -20,6 +20,8 @@ type Repository interface {
 	Get(course *GetCourseRequest) (*Course, error)
 	// Create saves a new course into the database.
 	Create(course *CreateCourseRequest) (*Course, error)
+	// Delete deletes a new course from a database.
+	Delete(course *DeleteCourseRequest) error
 }
 
 type firebaseRepository struct {
@@ -63,6 +65,15 @@ func NewFirebaseRepository() (Repository, error) {
 	return repository, nil
 }
 
+func (r *firebaseRepository) Get(c *GetCourseRequest) (*Course, error) {
+	course, err := r.getCourse(c.CourseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return course, nil
+}
+
 func (r *firebaseRepository) Create(c *CreateCourseRequest) (course *Course, err error) {
 	course = &Course{
 		Title:             c.Title,
@@ -93,20 +104,14 @@ func (r *firebaseRepository) Create(c *CreateCourseRequest) (course *Course, err
 		},
 	}, firestore.MergeAll)
 	if err != nil {
-		// Handle any errors in an appropriate way, such as returning them.
 		return nil, err
 	}
-
-	return
+	return course, nil
 }
 
-func (r *firebaseRepository) Get(c *GetCourseRequest) (*Course, error) {
-	course, err := r.getCourse(c.CourseID)
-	if err != nil {
-		return nil, err
-	}
-
-	return course, nil
+func (r *firebaseRepository) Delete(c *DeleteCourseRequest) error {
+	_, err := r.firestoreClient.Collection(FirestoreCoursesCollection).Doc(c.CourseID).Delete(firebase.FirebaseContext)
+	return err
 }
 
 // Helpers

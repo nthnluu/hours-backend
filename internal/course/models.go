@@ -21,3 +21,7 @@ type CreateCourseRequest struct {
 	Term      string     `json:"term"`
 	CreatedBy *auth.User `json:"omitempty"`
 }
+
+type DeleteCourseRequest struct {
+	CourseID     string     `json:"courseID"`
+}

@@ -12,6 +12,7 @@ func Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Get("/{courseID}", getCourseHandler)
 	router.With(auth.RequireAuth(true)).Post("/", createCourseHandler)
+	router.With(auth.RequireAuth(true)).Delete("/{courseID}", deleteCourseHandler)
 	return router
 }
 
@@ -48,4 +49,16 @@ func createCourseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.JSON(w, r, course)
+}
+
+func deleteCourseHandler(w http.ResponseWriter, r *http.Request) {
+	courseID := chi.URLParam(r, "courseID")
+
+	err := DeleteCourse(&DeleteCourseRequest{courseID})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
 }

@@ -38,6 +38,7 @@ func Start() {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   config.Config.AllowedOrigins,
 		AllowedHeaders:   []string{"Cookie", "Content-Type"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE"},
 		ExposedHeaders:   []string{"Set-Cookie"},
 		AllowCredentials: true,
 	})

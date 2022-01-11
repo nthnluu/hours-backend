@@ -15,6 +15,7 @@ func Routes() *chi.Mux {
 	router.With(RequireAuth(false)).Get("/me", getCurrentUserHandler)
 	router.With(RequireAuth(false)).Get("/{userID}", getUserHandler)
 	router.With(RequireAuth(true)).Post("/update/{userID}", updateUserHandler)
+	router.With(RequireAuth(true)).Post("/updateByEmail", updateUserByEmailHandler)
 	router.Post("/session", createSessionHandler)
 	router.Post("/signout", signOutHandler)
 	return router
@@ -67,6 +68,25 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte("Successfully edited user " + req.ID))
+}
+
+func updateUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var req UpdateUserByEmailRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = UpdateUserByEmail(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully edited user " + req.Email))
 }
 
 func createSessionHandler(w http.ResponseWriter, r *http.Request) {

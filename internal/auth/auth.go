@@ -32,6 +32,18 @@ func UpdateUser(user *UpdateUserRequest) error {
 	return repository.Update(user)
 }
 
+// GetUserByID retrieves the User associated with the given ID.
+func UpdateUserByEmail(u *UpdateUserByEmailRequest) error {
+	user, err := GetUserByEmail(u.Email)
+	if err != nil {
+		return err
+	}
+	return UpdateUser(&UpdateUserRequest{
+		ID: user.ID,
+		IsAdmin: u.IsAdmin,
+	})
+}
+
 // verifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.
 func verifySessionCookie(sessionCookie *http.Cookie) (*User, error) {
 	authClient, err := firebase.FirebaseApp.Auth(firebase.FirebaseContext)

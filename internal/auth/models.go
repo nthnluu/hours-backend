@@ -63,6 +63,12 @@ type UpdateUserRequest struct {
 	IsAdmin		bool `json:"isAdmin"`
 }
 
+// UpdateUserRequest is the parameter struct for the UpdateUser function.
+type UpdateUserByEmailRequest struct {
+	Email 		string `json:"email"`
+	IsAdmin		bool `json:"isAdmin"`
+}
+
 // Validators.
 
 func validateEmail(email string) error {

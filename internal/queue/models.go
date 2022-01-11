@@ -3,6 +3,7 @@ package queue
 import (
 	"signmeup/internal/auth"
 	"signmeup/internal/course"
+	"time"
 )
 
 type Queue struct {
@@ -15,6 +16,23 @@ type Queue struct {
 	Tickets     []string       `json:"tickets" mapstructure:"tickets"`
 }
 
+type TicketStatus string
+const (
+	StatusWaiting TicketStatus = "WAITING"
+	StatusClaimed TicketStatus = "CLAIMED"
+	StatusMissing TicketStatus = "MISSING"
+	StatusComplete TicketStatus = "COMPLETE"
+)
+
+type Ticket struct {
+	ID        string       `json:"id" mapstructure:"id"`
+	Queue     *Queue       `json:"queue" mapstructure:"queue"`
+	CreatedBy *auth.User   `json:"createdBy" mapstructure:"createdBy"`
+	CreatedAt time.Time    `json:"createdAt" mapstructure:"createdAt"`
+	Status    TicketStatus `json:"status" mapstructure:"status"`
+	Description string     `json:"description"`
+}
+
 // CreateQueueRequest is the parameter struct to the CreateQueue function.
 type CreateQueueRequest struct {
 	Title       string `json:"title"`
@@ -22,25 +40,23 @@ type CreateQueueRequest struct {
 	CourseID    string `json:"courseID"`
 }
 
-type TicketStatus int64
-
-const (
-	StatusWaiting TicketStatus = iota
-	StatusClaimed
-	StatusMissing
-	StatusComplete
-)
-
-type Ticket struct {
-	ID        string       `json:"id" mapstructure:"id"`
-	Queue     *Queue       `json:"queue" mapstructure:"queue"`
-	CreatedBy *auth.User   `json:"createdBy" mapstructure:"createdBy"`
-	Status    TicketStatus `json:"status" mapstructure:"status"`
+// CreateTicketRequest is the parameter struct to the CreateTicket function.
+type CreateTicketRequest struct {
+	QueueID     string     `json:"queueID,omitempty"`
+	CreatedBy   *auth.User `json:"createdBy,omitempty"`
+	Description string     `json:"description"`
 }
 
 // CreateTicketRequest is the parameter struct to the CreateTicket function.
-type CreateTicketRequest struct {
-	Description string     `json:"description"`
+type EditTicketRequest struct {
+	ID        string       `json:"id" mapstructure:"id"`
 	QueueID     string     `json:"queueID,omitempty"`
-	CreatedBy   *auth.User `json:"createdBy,omitempty"`
+	Status    TicketStatus `json:"status" mapstructure:"status"`
+	Description string     `json:"description"`
+}
+
+// CreateTicketRequest is the parameter struct to the CreateTicket function.
+type DeleteTicketRequest struct {
+	ID        string       `json:"id" mapstructure:"id"`
+	QueueID     string     `json:"queueID,omitempty"`
 }

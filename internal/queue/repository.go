@@ -20,6 +20,10 @@ type Repository interface {
 	CreateQueue(course *CreateQueueRequest) (*Queue, error)
 	// CreateTicket saves a new ticket into the database.
 	CreateTicket(course *CreateTicketRequest) (*Ticket, error)
+	// EditTicket edits a ticket.
+	EditTicket(c *EditTicketRequest) error
+	// Deleteticket deletes a ticket.
+	DeleteTicket(c *DeleteTicketRequest) error
 }
 
 type firebaseRepository struct {
@@ -98,22 +102,26 @@ func (r *firebaseRepository) CreateQueue(c *CreateQueueRequest) (queue *Queue, e
 }
 
 func (r *firebaseRepository) CreateTicket(c *CreateTicketRequest) (ticket *Ticket, err error) {
+	// Get the queue that this ticket belongs to.
 	queue, err := r.getQueue(c.QueueID)
 	if err != nil {
 		return nil, InvalidQueueError
 	}
 
+	// Construct ticket.
 	ticket = &Ticket{
 		Queue:     queue,
 		CreatedBy: c.CreatedBy,
 		Status:    StatusWaiting,
+		Description: c.Description,
 	}
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := r.firestoreClient.Collection(FirestoreQueuesCollection).Doc(queue.ID).Collection(FirestoreTicketsCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-		"createdBy": ticket.CreatedBy.Profile,
-		"createdAt": time.Now(),
-		"status":    ticket.Status,
+		"createdBy": 	ticket.CreatedBy.Profile,
+		"createdAt": 	time.Now(),
+		"status":    	ticket.Status,
+		"description":	ticket.Description,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating ticket: %v\n", err)
@@ -129,8 +137,50 @@ func (r *firebaseRepository) CreateTicket(c *CreateTicketRequest) (ticket *Ticke
 	if err != nil {
 		return nil, fmt.Errorf("error adding ticket to queue: %v\n", err)
 	}
+	return 
+}
 
-	return
+func (r *firebaseRepository) EditTicket(c *EditTicketRequest) error {
+	// Get the queue that this ticket belongs to.
+	queue, err := r.getQueue(c.QueueID)
+	if err != nil {
+		return InvalidQueueError
+	}
+
+	// Edit ticket in collection.
+	_, err = r.firestoreClient.Collection(FirestoreQueuesCollection).Doc(queue.ID).Collection(FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path: "status",
+			Value: c.Status,
+		}, {
+			Path: "description",
+			Value: c.Description,
+		},
+	})
+	return err
+}
+
+func (r *firebaseRepository) DeleteTicket(c *DeleteTicketRequest) error {
+	// Get the queue that this ticket belongs to.
+	queue, err := r.getQueue(c.QueueID)
+	if err != nil {
+		return InvalidQueueError
+	}
+
+	// Remove ticket from tickets.
+	_, err = r.firestoreClient.Collection(FirestoreQueuesCollection).Doc(queue.ID).Collection(FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.FirebaseContext)
+	if err != nil {
+		return err
+	}
+
+	// Remove ticket from queue.
+	_, err = r.firestoreClient.Collection(FirestoreQueuesCollection).Doc(queue.ID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "tickets",
+			Value: firestore.ArrayRemove(c.ID),
+		},
+	})
+	return err
 }
 
 // getQueue gets the Queue from the queues map corresponding to the provided queue ID.

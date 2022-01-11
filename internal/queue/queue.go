@@ -24,6 +24,16 @@ func CreateTicket(ticket *CreateTicketRequest) (*Ticket, error) {
 	return createdTicket, nil
 }
 
+// CreateTicket creates a ticket within the given queue.
+func EditTicket(ticket *EditTicketRequest) error {
+	return repository.EditTicket(ticket)
+}
+
+// CreateTicket creates a ticket within the given queue.
+func DeleteTicket(ticket *DeleteTicketRequest) error {
+	return repository.DeleteTicket(ticket)
+}
+
 func init() {
 	repo, err := NewFirebaseRepository()
 	if err != nil {

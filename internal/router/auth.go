@@ -19,6 +19,7 @@ func AuthRoutes() *chi.Mux {
 
 	// Information about the current user
 	router.With(auth.RequireAuth(false)).Get("/me", getMeHandler)
+	router.With(auth.RequireAuth(false)).Get("/{userID}", getUserHandler)
 
 	// Update the current user's information
 	router.With(auth.RequireAuth(true)).Post("/update/{userID}", updateUserHandler)
@@ -40,6 +41,25 @@ func getMeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.JSON(w, r, user.Profile)
+}
+
+func getUserHandler(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+	user, err := repo.Repository.GetUserByID(userID)
+	if err != nil {
+		// TODO(nthnluu): Refactor into helper function
+		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		resp := make(map[string]string)
+		resp["message"] = "User Not Found"
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatalf("json marshal fucked. Err: %s", err)
+		}
+		w.Write(jsonResp)
+		return
+	}
+	render.JSON(w, r, user)
 }
 
 // POST: /update/{userId}

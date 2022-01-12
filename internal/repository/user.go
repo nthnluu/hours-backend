@@ -86,6 +86,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 			IsAdmin: fr.getUserCount() == 0,
 		}
 		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
+			"coursePermissions": make(map[string]models.CoursePermission),
 			"displayName": profile.DisplayName,
 			"email":       profile.Email,
 			"id":          fbUser.UID,

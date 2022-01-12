@@ -48,7 +48,7 @@ func (fr *FirebaseRepository) GetCourseByID(ID string) (*models.Course, error) {
 
 // GetCourse creates a course using the provided ID.
 func (fr *FirebaseRepository) GetCourse(course *models.GetCourseRequest) (*models.Course, error) {
-	gottedCourse, err := fr.GetCourse(course)
+	gottedCourse, err := fr.GetCourseByID(course.CourseID)
 	if err != nil {
 		return nil, err
 	}

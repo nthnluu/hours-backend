@@ -32,7 +32,7 @@ func CourseRoutes() *chi.Mux {
 func getCourseHandler(w http.ResponseWriter, r *http.Request) {
 	courseID := chi.URLParam(r, "courseID")
 
-	course, err := repo.Repository.GetCourse(&models.GetCourseRequest{courseID})
+	course, err := repo.Repository.GetCourse(&models.GetCourseRequest{CourseID: courseID})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -92,16 +92,25 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 		return qerrors.InvalidQueueError
 	}
 
-	// Edit ticket in collection.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, []firestore.Update{
+	updates := []firestore.Update{
 		{
-			Path:  "status",
+			Path: "status",
 			Value: c.Status,
 		}, {
-			Path:  "description",
+			Path: "description",
 			Value: c.Description,
 		},
-	})
+	}
+
+	if c.Status == models.StatusClaimed {
+		updates = append(updates, firestore.Update{
+			Path: "claimedAt",
+			Value: time.Now(),
+		})
+	}
+
+	// Edit ticket in collection.
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, updates)
 	return err
 }
 

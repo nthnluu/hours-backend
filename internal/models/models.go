@@ -147,6 +147,19 @@ type CreateQueueRequest struct {
 	CourseID    string `json:"courseID"`
 }
 
+// EditQueueRequest is the parameter struct to the EditQueue function.
+type EditQueueRequest struct {
+	QueueID     string `json:"queueID,omitempty"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	IsActive    bool   `json:"isActive"`
+}
+
+// DeleteQueueRequest is the parameter struct to the CreateQueue function.
+type DeleteQueueRequest struct {
+	QueueID     string `json:"queueID,omitempty"`
+}
+
 // CreateTicketRequest is the parameter struct to the CreateTicket function.
 type CreateTicketRequest struct {
 	QueueID     string `json:"queueID,omitempty"`

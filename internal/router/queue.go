@@ -17,9 +17,12 @@ func QueueRoutes() *chi.Mux {
 
 	// Queue creation
 	router.With(auth.RequireAuth(false)).Post("/create", createQueueHandler)
+	router.With(auth.RequireAuth(false)).Post("/edit/{queueID}", editQueueHandler)
+	router.With(auth.RequireAuth(false)).Post("/delete/{queueID}", deleteQueueHandler)
 
 	// Ticket modification
 	// TODO(neil): Make this more semantically REST-y!
+	// TODO: have ticketID in the edit/delete routes
 	router.With(auth.RequireAuth(false)).Post("/ticket/create/{queueID}", createTicketHandler)
 	router.With(auth.RequireAuth(false)).Post("/ticket/edit/{queueID}", editTicketHandler)
 	router.With(auth.RequireAuth(false)).Post("/ticket/delete/{queueID}", deleteTicketHandler)
@@ -44,6 +47,41 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.JSON(w, r, queue)
+}
+
+// POST: /edit
+func editQueueHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.EditQueueRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
+	req.QueueID = chi.URLParam(r, "queueID")
+	err = repo.Repository.EditQueue(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully edited queue " + req.QueueID))
+}
+
+// POST: /delete
+func deleteQueueHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.DeleteQueueRequest
+	req.QueueID = chi.URLParam(r, "queueID")
+	err := repo.Repository.DeleteQueue(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully edited queue " + req.QueueID))
 }
 
 // POST: /ticket/create/{queueID}

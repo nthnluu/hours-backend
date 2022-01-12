@@ -35,7 +35,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"code":  queue.Course.Code,
 		},
 		"tickets": []string{},
-		"active":  queue.IsActive,
+		"isActive":  queue.IsActive,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -44,6 +44,29 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 	queue.ID = ref.ID
 
 	return
+}
+
+func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
+	// Update queue.
+	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path: "title",
+			Value: c.Title,
+		}, {
+			Path: "description",
+			Value: c.Description,
+		}, {
+			Path: "isActive",
+			Value: c.IsActive,
+		},
+	})
+	return err
+}
+
+func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
+	// Delete queue.
+	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Delete(firebase.FirebaseContext)
+	return err
 }
 
 func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticket *models.Ticket, err error) {

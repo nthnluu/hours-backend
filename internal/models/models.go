@@ -108,7 +108,7 @@ type RemoveCoursePermissionRequest struct {
 // Queue stuff
 
 var (
-	FirestoreQueuesCollection  = "queue"
+	FirestoreQueuesCollection  = "queues"
 	FirestoreTicketsCollection = "tickets"
 )
 

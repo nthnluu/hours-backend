@@ -118,12 +118,20 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var sameSite http.SameSite
+	if config.Config.IsHTTPS {
+		sameSite = http.SameSiteNoneMode
+	} else {
+		sameSite = http.SameSiteLaxMode
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     config.Config.SessionCookieName,
 		Value:    cookie,
 		MaxAge:   int(expiresIn.Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
+		Secure:   config.Config.IsHTTPS,
 		Path:     "/",
 	})
 
@@ -133,12 +141,20 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func signOutHandler(w http.ResponseWriter, r *http.Request) {
+	var sameSite http.SameSite
+	if config.Config.IsHTTPS {
+		sameSite = http.SameSiteNoneMode
+	} else {
+		sameSite = http.SameSiteLaxMode
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     config.Config.SessionCookieName,
 		Value:    "",
 		MaxAge:   -1,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
+		Secure:   config.Config.IsHTTPS,
 		Path:     "/",
 	})
 

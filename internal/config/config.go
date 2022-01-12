@@ -14,6 +14,8 @@ type ServerConfig struct {
 	// AllowedEmailDomains is a list of email domains that the server will allow account registrations from. If empty,
 	// all domains will be allowed.
 	AllowedEmailDomains []string
+	// IsHTTPS should be set to true for production.
+	IsHTTPS bool
 	// SessionCookieName is the name to use for the session cookie.
 	SessionCookieName string
 	// SessionCookieExpiration is the amount of time a session cookie is valid. Max 5 days.
@@ -22,10 +24,22 @@ type ServerConfig struct {
 	Port int
 }
 
-func DefaultConfig() *ServerConfig {
+func DefaultDevelopmentConfig() *ServerConfig {
 	return &ServerConfig{
 		AllowedOrigins:          []string{"http://localhost:3000"},
 		AllowedEmailDomains:     []string{"brown.edu"},
+		IsHTTPS:       			 false,
+		SessionCookieName:       "signmeup-session",
+		SessionCookieExpiration: time.Hour * 24 * 14,
+		Port:                    8080,
+	}
+}
+
+func DefaultProductionConfig() *ServerConfig {
+	return &ServerConfig{
+		AllowedOrigins:          []string{"https://signmeup.luu.dev"},
+		AllowedEmailDomains:     []string{"brown.edu"},
+		IsHTTPS:       			 true,
 		SessionCookieName:       "signmeup-session",
 		SessionCookieExpiration: time.Hour * 24 * 14,
 		Port:                    8080,
@@ -34,5 +48,5 @@ func DefaultConfig() *ServerConfig {
 
 func init() {
 	log.Println("🙂️ No configuration provided. Using the default configuration.")
-	Config = DefaultConfig()
+	Config = DefaultProductionConfig()
 }

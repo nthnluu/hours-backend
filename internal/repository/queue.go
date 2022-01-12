@@ -87,8 +87,8 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 }
 
 func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
-	// Get the queue that this ticket belongs to.
-	queue, err := fr.getQueue(c.QueueID)
+	// Validate that this is a valid queue.
+	_, err := fr.getQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
@@ -111,25 +111,25 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 	}
 
 	// Edit ticket in collection.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, updates)
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, updates)
 	return err
 }
 
 func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error {
-	// Get the queue that this ticket belongs to.
-	queue, err := fr.getQueue(c.QueueID)
+	// Validate that this is a valid queue.
+	_, err := fr.getQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
 
 	// Remove ticket from tickets.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.FirebaseContext)
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.FirebaseContext)
 	if err != nil {
 		return err
 	}
 
 	// Remove ticket from queue.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
 		{
 			Path:  "tickets",
 			Value: firestore.ArrayRemove(c.ID),

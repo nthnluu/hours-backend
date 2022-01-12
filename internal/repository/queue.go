@@ -38,7 +38,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		"active":  queue.IsActive,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error creating queue: %v\n", err)
+		return nil, fmt.Errorf("error creating queue: %v", err)
 	}
 
 	queue.ID = ref.ID

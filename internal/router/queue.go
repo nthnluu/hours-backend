@@ -1,25 +1,35 @@
-package queue
+package router
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"log"
 	"net/http"
 	"signmeup/internal/auth"
+	"signmeup/internal/models"
+	repo "signmeup/internal/repository"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
-func Routes() *chi.Mux {
+func QueueRoutes() *chi.Mux {
 	router := chi.NewRouter()
+
+	// Queue creation
 	router.With(auth.RequireAuth(false)).Post("/create", createQueueHandler)
+
+	// Ticket modification
+	// TODO(neil): Make this more semantically REST-y!
 	router.With(auth.RequireAuth(false)).Post("/ticket/create/{queueID}", createTicketHandler)
 	router.With(auth.RequireAuth(false)).Post("/ticket/edit/{queueID}", editTicketHandler)
 	router.With(auth.RequireAuth(false)).Post("/ticket/delete/{queueID}", deleteTicketHandler)
+
 	return router
 }
 
+// POST: /create
 func createQueueHandler(w http.ResponseWriter, r *http.Request) {
-	var req CreateQueueRequest
+	var req models.CreateQueueRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -27,7 +37,7 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queue, err := CreateQueue(&req)
+	queue, err := repo.Repository.CreateQueue(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -36,8 +46,9 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, queue)
 }
 
+// POST: /ticket/create/{queueID}
 func createTicketHandler(w http.ResponseWriter, r *http.Request) {
-	var req CreateTicketRequest
+	var req models.CreateTicketRequest
 	queueID := chi.URLParam(r, "queueID")
 	user, err := auth.GetUserFromRequest(r)
 	if err != nil {
@@ -52,7 +63,7 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 	req.QueueID = queueID
 	req.CreatedBy = user
 
-	ticket, err := CreateTicket(&req)
+	ticket, err := repo.Repository.CreateTicket(&req)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -62,8 +73,9 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, ticket)
 }
 
+// POST: /ticket/edit/{queueID}
 func editTicketHandler(w http.ResponseWriter, r *http.Request) {
-	var req EditTicketRequest
+	var req *models.EditTicketRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -73,7 +85,7 @@ func editTicketHandler(w http.ResponseWriter, r *http.Request) {
 	queueID := chi.URLParam(r, "queueID")
 	req.QueueID = queueID
 
-	err = EditTicket(&req)
+	err = repo.Repository.EditTicket(req)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -84,8 +96,9 @@ func editTicketHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Successfully edited ticket " + req.ID))
 }
 
+// POST: /ticket/delete/{queueID}
 func deleteTicketHandler(w http.ResponseWriter, r *http.Request) {
-	var req DeleteTicketRequest
+	var req *models.DeleteTicketRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -95,7 +108,7 @@ func deleteTicketHandler(w http.ResponseWriter, r *http.Request) {
 	queueID := chi.URLParam(r, "queueID")
 	req.QueueID = queueID
 
-	err = DeleteTicket(&req)
+	err = repo.Repository.DeleteTicket(req)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)

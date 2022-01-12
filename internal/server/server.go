@@ -18,11 +18,14 @@ func Routes() *chi.Mux {
 		middleware.Logger, // Log API Request Calls
 	)
 
+	router.Route("/", func(r chi.Router) {
+		r.Mount("/", rtr.HealthRoutes())
+	})
+
 	router.Route("/v1", func(r chi.Router) {
 		r.Mount("/users", rtr.AuthRoutes())
 		r.Mount("/courses", rtr.CourseRoutes())
 		r.Mount("/queues", rtr.QueueRoutes())
-		// mount routes here...
 	})
 
 	return router
@@ -37,6 +40,7 @@ func Start() {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   config.Config.AllowedOrigins,
 		AllowedHeaders:   []string{"Cookie", "Content-Type"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE"},
 		ExposedHeaders:   []string{"Set-Cookie"},
 		AllowCredentials: true,
 	})

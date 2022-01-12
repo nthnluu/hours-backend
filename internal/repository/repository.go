@@ -67,6 +67,7 @@ func NewFirebaseRepository() (*FirebaseRepository, error) {
 	// by previous listeners
 	initFns := []func(){fr.initializeCoursesListener, fr.initializeQueuesListener, fr.initializeUserProfilesListener}
 	for _, initFn := range initFns {
+		fmt.Println("Something was initialized!")
 		initFn()
 	}
 

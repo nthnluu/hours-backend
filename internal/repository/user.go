@@ -100,6 +100,63 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 	return fbUserToUserRecord(fbUser, profile), nil
 }
 
+// GetUserByID retrieves the User associated with the given ID.
+func (fr *FirebaseRepository) GetUserByEmail(email string) (*models.User, error) {
+	userID, err := fr.GetIDByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	return fr.GetUserByID(userID)
+}
+
+func (fr *FirebaseRepository) GetIDByEmail(email string) (string, error) {
+	// Get user by email.
+	iter := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Where("email", "==", email).Documents(firebase.FirebaseContext)
+	doc, err := iter.Next()
+	if err != nil {
+		return "", err
+	}
+	// Cast.
+	data := doc.Data()
+	return data["id"].(string), nil
+}
+
+func (fr *FirebaseRepository) UpdateUser(user *models.UpdateUserRequest) error {
+	var err error
+	if user.DisplayName == "" {
+		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+			{
+				Path:  "isAdmin",
+				Value: user.IsAdmin,
+			},
+		})
+	} else {
+		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+			{
+				Path:  "displayName",
+				Value: user.DisplayName,
+			}, {
+				Path:  "isAdmin",
+				Value: user.IsAdmin,
+			},
+		})
+	}
+	return err
+}
+
+// GetUserByID retrieves the User associated with the given ID.
+func (fr *FirebaseRepository) UpdateUserByEmail(u *models.UpdateUserByEmailRequest) error {
+	user, err := fr.GetUserByEmail(u.Email)
+	if err != nil {
+		return err
+	}
+	return fr.UpdateUser(&models.UpdateUserRequest{
+		ID:      user.ID,
+		IsAdmin: u.IsAdmin,
+	})
+}
+
 func (fr *FirebaseRepository) Count() int {
 	// TODO: Should we lock this?
 	return len(fr.profiles)
@@ -177,11 +234,6 @@ func (fr *FirebaseRepository) Create(user *models.CreateUserRequest) (*models.Us
 	}
 
 	return fbUserToUserRecord(fbUser, profile), nil
-}
-
-// TODO
-func (fr *FirebaseRepository) Update(user *models.UpdateUserRequest) (*models.User, error) {
-	return nil, nil
 }
 
 func (fr *FirebaseRepository) Delete(id string) error {

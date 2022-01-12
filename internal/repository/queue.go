@@ -5,23 +5,23 @@ import (
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
 )
 
-// CreateQueue creates a queue with the given details, and returns the queue.
-func (fr *FirebaseRepository) CreateQueue(cqr *models.CreateQueueRequest) (queue *models.Queue, err error) {
-	course, err := fr.getCourse(cqr.CourseID)
+func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *models.Queue, err error) {
+	queueCourse, err := fr.GetCourseByID(c.CourseID)
 	if err != nil {
 		return nil, err
 	}
 
 	queue = &models.Queue{
-		Title:       cqr.Title,
-		Description: cqr.Description,
-		CourseID:    course.ID,
-		Course:      course,
+		Title:       c.Title,
+		Description: c.Description,
+		CourseID:    queueCourse.ID,
+		Course:      queueCourse,
 		IsActive:    true,
 	}
 
@@ -47,39 +47,85 @@ func (fr *FirebaseRepository) CreateQueue(cqr *models.CreateQueueRequest) (queue
 }
 
 func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticket *models.Ticket, err error) {
+	// Get the queue that this ticket belongs to.
 	queue, err := fr.getQueue(c.QueueID)
 	if err != nil {
 		return nil, qerrors.InvalidQueueError
 	}
 
+	// Construct ticket.
 	ticket = &models.Ticket{
-		Queue:     queue,
-		CreatedBy: c.CreatedBy,
-		Status:    models.StatusWaiting,
+		Queue:       queue,
+		CreatedBy:   c.CreatedBy,
+		Status:      models.StatusWaiting,
+		Description: c.Description,
 	}
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Collection(models.FirestoreTicketsCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-		"createdBy": ticket.CreatedBy,
-		"status":    ticket.Status,
+		"createdBy":   ticket.CreatedBy.Profile,
+		"createdAt":   time.Now(),
+		"status":      ticket.Status,
+		"description": ticket.Description,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating ticket: %v\n", err)
 	}
-	queue.ID = ref.ID
 
 	// Add ticket to the queue's ticket array
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Update(firebase.FirebaseContext, []firestore.Update{
 		{
 			Path:  "tickets",
-			Value: append(queue.Tickets, queue.ID),
+			Value: append(queue.Tickets, ref.ID),
 		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error adding ticket to queue: %v\n", err)
 	}
-
 	return
+}
+
+func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
+	// Get the queue that this ticket belongs to.
+	queue, err := fr.getQueue(c.QueueID)
+	if err != nil {
+		return qerrors.InvalidQueueError
+	}
+
+	// Edit ticket in collection.
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "status",
+			Value: c.Status,
+		}, {
+			Path:  "description",
+			Value: c.Description,
+		},
+	})
+	return err
+}
+
+func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error {
+	// Get the queue that this ticket belongs to.
+	queue, err := fr.getQueue(c.QueueID)
+	if err != nil {
+		return qerrors.InvalidQueueError
+	}
+
+	// Remove ticket from tickets.
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.FirebaseContext)
+	if err != nil {
+		return err
+	}
+
+	// Remove ticket from queue.
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(queue.ID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "tickets",
+			Value: firestore.ArrayRemove(c.ID),
+		},
+	})
+	return err
 }
 
 // getQueue gets the Queue from the queues map corresponding to the provided queue ID.
@@ -106,7 +152,7 @@ func (fr *FirebaseRepository) initializeQueuesListener() {
 			return err
 		}
 
-		c, err := fr.getCourse(q.CourseID)
+		c, err := fr.GetCourseByID(q.CourseID)
 		if err != nil {
 			fmt.Println(q.CourseID)
 			return err

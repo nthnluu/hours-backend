@@ -17,7 +17,7 @@ func (fr *FirebaseRepository) initializeCoursesListener() {
 		defer fr.coursesLock.Unlock()
 
 		var c models.Course
-		err := mapstructure.Decode(doc, &c)
+		err := mapstructure.Decode(doc.Data(), &c)
 		if err != nil {
 			log.Panicf("Error destructuring document: %v", err)
 			return err
@@ -44,16 +44,6 @@ func (fr *FirebaseRepository) GetCourseByID(ID string) (*models.Course, error) {
 	} else {
 		return nil, qerrors.CourseNotFoundError
 	}
-}
-
-// GetCourse creates a course using the provided ID.
-func (fr *FirebaseRepository) GetCourse(course *models.GetCourseRequest) (*models.Course, error) {
-	gottedCourse, err := fr.GetCourseByID(course.CourseID)
-	if err != nil {
-		return nil, err
-	}
-
-	return gottedCourse, nil
 }
 
 func (fr *FirebaseRepository) CreateCourse(c *models.CreateCourseRequest) (course *models.Course, err error) {

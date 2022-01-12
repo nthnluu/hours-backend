@@ -4,6 +4,9 @@ import (
 	"context"
 	"net/http"
 	"signmeup/internal/config"
+	"signmeup/internal/models"
+	"signmeup/internal/qerrors"
+	"signmeup/internal/repository"
 )
 
 // RequireAuth is a middleware that rejects requests without a valid session cookie. The User associated with the
@@ -20,7 +23,7 @@ func RequireAuth(adminOnly bool) func(handler http.Handler) http.Handler {
 
 			// Verify the session cookie. In this case an additional check is added to detect
 			// if the user's Firebase session was revoked, user deleted/disabled, etc.
-			user, err := verifySessionCookie(tokenCookie)
+			user, err := repository.Repository.VerifySessionCookie(tokenCookie)
 			if err != nil {
 				// Missing session cookie.
 				rejectUnauthorizedRequest(w)
@@ -43,13 +46,13 @@ func RequireAuth(adminOnly bool) func(handler http.Handler) http.Handler {
 
 // GetUserFromRequest returns a User if it exists within the request context. Only works with routes that implement the
 // RequireAuth middleware.
-func GetUserFromRequest(r *http.Request) (*User, error) {
-	user := r.Context().Value("currentUser").(*User)
+func GetUserFromRequest(r *http.Request) (*models.User, error) {
+	user := r.Context().Value("currentUser").(*models.User)
 	if user != nil {
 		return user, nil
 	}
 
-	return nil, UserNotFoundError
+	return nil, qerrors.UserNotFoundError
 }
 
 // Helpers

@@ -1,21 +1,24 @@
-package course
+package router
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"net/http"
 	"signmeup/internal/auth"
+	"signmeup/internal/models"
+	"signmeup/internal/repository"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
-func Routes() *chi.Mux {
+func CourseRoutes() *chi.Mux {
 	router := chi.NewRouter()
 	router.With(auth.RequireAuth(true)).Post("/", createCourseHandler)
 	return router
 }
 
 func createCourseHandler(w http.ResponseWriter, r *http.Request) {
-	var req CreateCourseRequest
+	var req models.CreateCourseRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -23,11 +26,11 @@ func createCourseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	course, err := CreateCourse(&req)
+	c, err := repository.Repository.CreateCourse(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	render.JSON(w, r, course)
+	render.JSON(w, r, c)
 }

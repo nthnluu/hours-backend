@@ -2,15 +2,14 @@ package server
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	"signmeup/internal/config"
+	rtr "signmeup/internal/router"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
-	"log"
-	"net/http"
-	"signmeup/internal/auth"
-	"signmeup/internal/config"
-	"signmeup/internal/course"
-	"signmeup/internal/queue"
 )
 
 func Routes() *chi.Mux {
@@ -20,9 +19,9 @@ func Routes() *chi.Mux {
 	)
 
 	router.Route("/v1", func(r chi.Router) {
-		r.Mount("/users", auth.Routes())
-		r.Mount("/courses", course.Routes())
-		r.Mount("/queues", queue.Routes())
+		r.Mount("/users", rtr.AuthRoutes())
+		r.Mount("/courses", rtr.CourseRoutes())
+		r.Mount("/queues", rtr.QueueRoutes())
 		// mount routes here...
 	})
 

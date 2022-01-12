@@ -1,19 +1,22 @@
-package auth
+package router
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"log"
 	"net/http"
+	"signmeup/internal/auth"
 	"signmeup/internal/config"
 	"signmeup/internal/firebase"
+	"signmeup/internal/repository"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
-func Routes() *chi.Mux {
+func AuthRoutes() *chi.Mux {
 	router := chi.NewRouter()
-	router.With(RequireAuth(false)).Get("/{userID}", getUserHandler)
-	router.With(RequireAuth(false)).Get("/me", getCurrentUserHandler)
+	router.With(auth.RequireAuth(false)).Get("/{userID}", getUserHandler)
+	router.With(auth.RequireAuth(false)).Get("/me", getCurrentUserHandler)
 	router.Post("/session", createSessionHandler)
 	router.Post("/signout", signOutHandler)
 	return router
@@ -21,7 +24,7 @@ func Routes() *chi.Mux {
 
 func getUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
-	user, err := GetUserByID(userID)
+	user, err := repository.Repository.GetUserByID(userID)
 	if err != nil {
 		// TODO(nthnluu): Refactor into helper function
 		w.WriteHeader(http.StatusNotFound)
@@ -82,7 +85,7 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
+	user, err := auth.GetUserFromRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"log"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
@@ -198,6 +199,11 @@ func (fr *FirebaseRepository) initializeQueuesListener() {
 	}
 
 	done := make(chan bool)
-	go fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDoc)
+	go func() {
+		err := fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDoc)
+		if err != nil {
+			log.Panicf("%v collection listener error: %v\n", models.FirestoreQueuesCollection, err)
+		}
+	}()
 	<-done
 }

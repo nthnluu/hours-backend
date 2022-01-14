@@ -40,7 +40,10 @@ func getMeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.JSON(w, r, user.Profile)
+	render.JSON(w, r, struct {
+		*models.Profile
+		ID string `json:"id"`
+	}{user.Profile, user.ID})
 }
 
 func getUserHandler(w http.ResponseWriter, r *http.Request) {

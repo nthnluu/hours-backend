@@ -40,23 +40,18 @@ func getMeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.JSON(w, r, user.Profile)
+	render.JSON(w, r, struct {
+		*models.Profile
+		ID string `json:"id"`
+	}{user.Profile, user.ID})
 }
 
 func getUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
 	user, err := repo.Repository.GetUserByID(userID)
 	if err != nil {
-		// TODO(nthnluu): Refactor into helper function
 		w.WriteHeader(http.StatusNotFound)
-		w.Header().Set("Content-Type", "application/json")
-		resp := make(map[string]string)
-		resp["message"] = "User Not Found"
-		jsonResp, err := json.Marshal(resp)
-		if err != nil {
-			log.Fatalf("json marshal fucked. Err: %s", err)
-		}
-		w.Write(jsonResp)
+		w.Write([]byte("user not found"))
 		return
 	}
 	render.JSON(w, r, user)

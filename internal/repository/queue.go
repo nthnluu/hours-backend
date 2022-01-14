@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"log"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
@@ -34,8 +35,8 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"title": queue.Course.Title,
 			"code":  queue.Course.Code,
 		},
-		"tickets": []string{},
-		"isActive":  queue.IsActive,
+		"tickets":  []string{},
+		"isActive": queue.IsActive,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -50,13 +51,13 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 	// Update queue.
 	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
 		{
-			Path: "title",
+			Path:  "title",
 			Value: c.Title,
 		}, {
-			Path: "description",
+			Path:  "description",
 			Value: c.Description,
 		}, {
-			Path: "isActive",
+			Path:  "isActive",
 			Value: c.IsActive,
 		},
 	})
@@ -118,17 +119,17 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 
 	updates := []firestore.Update{
 		{
-			Path: "status",
+			Path:  "status",
 			Value: c.Status,
 		}, {
-			Path: "description",
+			Path:  "description",
 			Value: c.Description,
 		},
 	}
 
 	if c.Status == models.StatusClaimed {
 		updates = append(updates, firestore.Update{
-			Path: "claimedAt",
+			Path:  "claimedAt",
 			Value: time.Now(),
 		})
 	}
@@ -162,11 +163,11 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 }
 
 // getQueue gets the Queue from the queues map corresponding to the provided queue ID.
-func (r FirebaseRepository) getQueue(id string) (*models.Queue, error) {
-	r.queuesLock.RLock()
-	defer r.queuesLock.RUnlock()
+func (fr *FirebaseRepository) getQueue(id string) (*models.Queue, error) {
+	fr.queuesLock.RLock()
+	defer fr.queuesLock.RUnlock()
 
-	if val, ok := r.queues[id]; ok {
+	if val, ok := fr.queues[id]; ok {
 		return val, nil
 	} else {
 		return nil, fmt.Errorf("No profile found for ID %v\n", id)
@@ -198,6 +199,11 @@ func (fr *FirebaseRepository) initializeQueuesListener() {
 	}
 
 	done := make(chan bool)
-	go fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDoc)
+	go func() {
+		err := fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDoc)
+		if err != nil {
+			log.Panicf("%v collection listener error: %v\n", models.FirestoreQueuesCollection, err)
+		}
+	}()
 	<-done
 }

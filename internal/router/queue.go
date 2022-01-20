@@ -20,6 +20,7 @@ func QueueRoutes() *chi.Mux {
 	router.With(auth.RequireAuth(false)).Post("/edit/{queueID}", editQueueHandler)
 	router.With(auth.RequireAuth(false)).Post("/delete/{queueID}", deleteQueueHandler)
 	router.With(auth.RequireAuth(false)).Post("/cutoff/{queueID}", cutoffQueueHandler)
+	router.With(auth.RequireAuth(false)).Post("/shuffle/{queueID}", shuffleQueueHandler)
 
 	// Ticket modification
 	// TODO(neil): Make this more semantically REST-y!

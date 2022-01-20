@@ -90,10 +90,6 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		return nil, qerrors.InvalidQueueError
 	}
 
-	if queue.IsCutOff {
-		return nil, qerrors.CutoffQueueError
-	}
-
 	ticket = &models.Ticket{
 		Queue:       queue,
 		CreatedBy:   c.CreatedBy,

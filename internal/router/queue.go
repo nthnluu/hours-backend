@@ -15,19 +15,20 @@ import (
 func QueueRoutes() *chi.Mux {
 	router := chi.NewRouter()
 
+	router.Use(auth.AuthCtx())
+
 	// Queue creation
-	router.With(auth.RequireAuth(false)).Post("/create", createQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/edit/{queueID}", editQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/delete/{queueID}", deleteQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/cutoff/{queueID}", cutoffQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/shuffle/{queueID}", shuffleQueueHandler)
+	// TODO: handle permissions here
+	router.Post("/create", createQueueHandler)
+	router.With(auth.RequireStaffForQueue("queueID")).Post("/edit/{queueID}", editQueueHandler)
+	router.With(auth.RequireStaffForQueue("queueID")).Post("/delete/{queueID}", deleteQueueHandler)
+	router.With(auth.RequireStaffForQueue("queueID")).Post("/cutoff/{queueID}", cutoffQueueHandler)
+	router.With(auth.RequireStaffForQueue("queueID")).Post("/shuffle/{queueID}", shuffleQueueHandler)
 
 	// Ticket modification
-	// TODO(neil): Make this more semantically REST-y!
-	// TODO: have ticketID in the edit/delete routes
-	router.With(auth.RequireAuth(false)).Post("/ticket/create/{queueID}", createTicketHandler)
-	router.With(auth.RequireAuth(false)).Post("/ticket/edit/{queueID}", editTicketHandler)
-	router.With(auth.RequireAuth(false)).Post("/ticket/delete/{queueID}", deleteTicketHandler)
+	router.Post("/ticket/create/{queueID}", createTicketHandler)
+	router.Post("/ticket/edit/{queueID}", editTicketHandler)
+	router.Post("/ticket/delete/{queueID}", deleteTicketHandler)
 
 	return router
 }

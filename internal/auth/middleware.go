@@ -11,7 +11,10 @@ import (
 
 // RequireAuth is a middleware that rejects requests without a valid session cookie. The User associated with the
 // request is added to the request context, and can be accessed via GetUserFromRequest.
-func RequireAuth(adminOnly bool) func(handler http.Handler) http.Handler {
+
+// AuthCtx is a middleware that extracts the user's session cookie, verifies it, and places the current
+// user into the context used for the rest of the request.
+func AuthCtx() func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenCookie, err := r.Cookie(config.Config.SessionCookieName)
@@ -30,16 +33,30 @@ func RequireAuth(adminOnly bool) func(handler http.Handler) http.Handler {
 				return
 			}
 
-			if adminOnly && !user.IsAdmin {
-				rejectUnauthorizedRequest(w)
-				return
-			}
-
 			// create a new request context containing the authenticated user
 			ctxWithUser := context.WithValue(r.Context(), "currentUser", user)
 			rWithUser := r.WithContext(ctxWithUser)
 
 			next.ServeHTTP(w, rWithUser)
+		})
+	}
+}
+
+func RequireMetaAdmin() func(handler http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, err := GetUserFromRequest(r)
+			if err != nil {
+				rejectUnauthorizedRequest(w)
+				return
+			}
+
+			if !user.IsAdmin {
+				rejectForbiddenRequest(w)
+				return
+			}
+
+			next.ServeHTTP(w, r)
 		})
 	}
 }
@@ -59,4 +76,8 @@ func GetUserFromRequest(r *http.Request) (*models.User, error) {
 
 func rejectUnauthorizedRequest(w http.ResponseWriter) {
 	http.Error(w, "You must be authenticated to access this resource", http.StatusUnauthorized)
+}
+
+func rejectForbiddenRequest(w http.ResponseWriter) {
+	http.Error(w, "You do not have permission to access this resource", http.StatusForbidden)
 }

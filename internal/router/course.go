@@ -14,17 +14,23 @@ import (
 func CourseRoutes() *chi.Mux {
 	router := chi.NewRouter()
 
+	// All course routes require authentication.
+	router.Use(auth.AuthCtx())
+
 	// Get metadata about a course
 	router.Get("/{courseID}", getCourseHandler)
 
 	// Modifying courses themselves
-	router.With(auth.RequireAuth(true)).Post("/create", createCourseHandler)
-	router.With(auth.RequireAuth(true)).Post("/delete/{courseID}", deleteCourseHandler)
-	router.With(auth.RequireAuth(true)).Post("/edit/{courseID}", editCourseHandler)
+	// TODO: Is this permission right?
+	// TODO: Address this before merging.
+	router.With(auth.RequireMetaAdmin()).Post("/create", createCourseHandler)
+	router.With(auth.RequireAdminForCourse("courseID")).Post("/delete/{courseID}", deleteCourseHandler)
+	router.With(auth.RequireAdminForCourse("courseID")).Post("/edit/{courseID}", editCourseHandler)
 
 	// Course permissions
-	router.With(auth.RequireAuth(true)).Post("/addPermission/{courseID}", addCoursePermissionHandler)
-	router.With(auth.RequireAuth(true)).Post("/removePermission/{courseID}", removeCoursePermissionHandler)
+	router.With(auth.RequireAdminForCourse("courseID")).Post("/addPermission/{courseID}", addCoursePermissionHandler)
+	router.With(auth.RequireAdminForCourse("courseID")).Post("/removePermission/{courseID}", removeCoursePermissionHandler)
+
 	return router
 }
 

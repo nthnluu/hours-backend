@@ -17,15 +17,22 @@ import (
 func AuthRoutes() *chi.Mux {
 	router := chi.NewRouter()
 
-	// Information about the current user
-	router.With(auth.RequireAuth(false)).Get("/me", getMeHandler)
-	router.With(auth.RequireAuth(false)).Get("/{userID}", getUserHandler)
+	// Auth routes that require authentication
+	router.Route("/", func(r chi.Router) {
+		r.Use(auth.AuthCtx())
 
-	// Update the current user's information
-	router.With(auth.RequireAuth(true)).Post("/update/{userID}", updateUserHandler)
-	router.With(auth.RequireAuth(true)).Post("/updateByEmail", updateUserByEmailHandler)
+		// Information about the current user
+		router.With(auth.AuthCtx()).Get("/me", getMeHandler)
+		router.With(auth.AuthCtx()).Get("/{userID}", getUserHandler)
 
-	// Alter the current session
+		// Update the current user's information
+		// TODO: these handlers need to operate on the current user's ID, not the one they pass
+		// TODO: do not merge without figuring out.
+		router.Post("/update/{userID}", updateUserHandler)
+		router.Post("/updateByEmail", updateUserByEmailHandler)
+	})
+
+	// Alter the current session. No auth middlewares required.
 	router.Post("/session", createSessionHandler)
 	router.Post("/signout", signOutHandler)
 

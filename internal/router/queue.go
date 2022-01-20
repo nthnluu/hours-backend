@@ -82,7 +82,7 @@ func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Successfully edited queue " + req.QueueID))
 }
 
-// POST: /cutoff
+// POST: /cutoff/{queueID}
 func cutoffQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.CutoffQueueRequest
 

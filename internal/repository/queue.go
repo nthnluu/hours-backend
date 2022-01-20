@@ -24,6 +24,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		Description: c.Description,
 		CourseID:    queueCourse.ID,
 		Course:      queueCourse,
+		IsActive:    true,
 		IsCutOff:    false,
 	}
 

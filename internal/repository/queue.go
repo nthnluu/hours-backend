@@ -23,7 +23,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		Description: c.Description,
 		CourseID:    queueCourse.ID,
 		Course:      queueCourse,
-		IsActive:    true,
+		IsCutOff:    false,
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
@@ -67,6 +67,19 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
 	// Delete queue.
 	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Delete(firebase.FirebaseContext)
+
+	return err
+}
+
+func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
+	q, err := fr.GetCourseByID(c.CourseID)
+	if err != nil {
+		return err
+	}
+
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(q.ID).Update(firebase.FirebaseContext, []firestore.Update{
+		{Path: "isCutOff", Value: c.IsCutoff},
+	})
 	return err
 }
 
@@ -77,7 +90,10 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		return nil, qerrors.InvalidQueueError
 	}
 
-	// Construct ticket.
+	if queue.IsCutOff {
+		return nil, qerrors.CutoffQueueError
+	}
+
 	ticket = &models.Ticket{
 		Queue:       queue,
 		CreatedBy:   c.CreatedBy,

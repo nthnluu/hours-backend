@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"signmeup/internal/auth"
 	"signmeup/internal/models"
+	"signmeup/internal/qerrors"
 	repo "signmeup/internal/repository"
 
 	"github.com/go-chi/chi/v5"
@@ -19,6 +20,7 @@ func QueueRoutes() *chi.Mux {
 	router.With(auth.RequireAuth(false)).Post("/create", createQueueHandler)
 	router.With(auth.RequireAuth(false)).Post("/edit/{queueID}", editQueueHandler)
 	router.With(auth.RequireAuth(false)).Post("/delete/{queueID}", deleteQueueHandler)
+	router.With(auth.RequireAuth(false)).Post("/cutoff/{queueID}", cutoffQueueHandler)
 
 	// Ticket modification
 	// TODO(neil): Make this more semantically REST-y!
@@ -53,14 +55,8 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.EditQueueRequest
 
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	
 	req.QueueID = chi.URLParam(r, "queueID")
-	err = repo.Repository.EditQueue(&req)
+	err := repo.Repository.EditQueue(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -68,6 +64,25 @@ func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte("Successfully edited queue " + req.QueueID))
+}
+
+// POST: /cutoff
+func cutoffQueueHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.CutoffQueueRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = repo.Repository.CutoffQueue(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // POST: /delete
@@ -103,7 +118,11 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 
 	ticket, err := repo.Repository.CreateTicket(&req)
 	if err != nil {
-		log.Println(err.Error())
+		if err == qerrors.CutoffQueueError {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

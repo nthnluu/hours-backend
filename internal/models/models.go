@@ -118,8 +118,11 @@ type Queue struct {
 	Description string   `json:"code" mapstructure:"code"`
 	CourseID    string   `json:"courseID" mapstructure:"courseID"`
 	Course      *Course  `json:"course" mapstructure:"course,omitempty"`
-	IsActive    bool     `json:"isActive" mapstructure:"isActive"`
+	IsCutOff    bool     `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
 	Tickets     []string `json:"tickets" mapstructure:"tickets"`
+
+	// Deprecated
+	IsActive bool `json:"isActive" mapstructure:"isActive"`
 }
 
 type TicketStatus string
@@ -157,7 +160,13 @@ type EditQueueRequest struct {
 
 // DeleteQueueRequest is the parameter struct to the CreateQueue function.
 type DeleteQueueRequest struct {
-	QueueID     string `json:"queueID,omitempty"`
+	QueueID string `json:"queueID,omitempty"`
+}
+
+// CutoffQueueRequest is the parameter struct to the CutoffQueue function.
+type CutoffQueueRequest struct {
+	IsCutoff bool   `json:"isCutOff"`
+	CourseID string `json:"courseID"`
 }
 
 // CreateTicketRequest is the parameter struct to the CreateTicket function.

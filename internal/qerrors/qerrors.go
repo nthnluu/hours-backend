@@ -13,4 +13,5 @@ var (
 
 	// Queue errors
 	InvalidQueueError = errors.New("the provided queue is not valid")
+	CutoffQueueError  = errors.New("the queue being signed up for is cutoff")
 )

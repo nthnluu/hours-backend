@@ -50,6 +50,22 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, queue)
 }
 
+// POST: /shuffle
+func shuffleQueueHandler(w http.ResponseWriter, r *http.Request) {
+	var req *models.ShuffleQueueRequest
+
+	queueID := chi.URLParam(r, "queueID")
+	req.QueueID = queueID
+
+	err := repo.Repository.ShuffleQueue(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // POST: /edit
 func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.EditQueueRequest
@@ -102,6 +118,7 @@ func deleteQueueHandler(w http.ResponseWriter, r *http.Request) {
 func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateTicketRequest
 	queueID := chi.URLParam(r, "queueID")
+
 	user, err := auth.GetUserFromRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)

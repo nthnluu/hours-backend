@@ -169,6 +169,10 @@ type CutoffQueueRequest struct {
 	CourseID string `json:"courseID"`
 }
 
+type ShuffleQueueRequest struct {
+	QueueID string `json:"queueID,omitempty"`
+}
+
 // CreateTicketRequest is the parameter struct to the CreateTicket function.
 type CreateTicketRequest struct {
 	QueueID     string `json:"queueID,omitempty"`

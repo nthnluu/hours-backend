@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
@@ -81,6 +82,30 @@ func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
 		{Path: "isCutOff", Value: c.IsCutoff},
 	})
 	return err
+}
+
+func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error {
+	q, err := fr.getQueue(c.QueueID)
+	if err != nil {
+		return qerrors.InvalidQueueError
+	}
+
+	rand.Shuffle(len(q.Tickets), func(i, j int) {
+		q.Tickets[i], q.Tickets[j] = q.Tickets[j], q.Tickets[i]
+	})
+
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "tickets",
+			Value: q.Tickets,
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("error shuffling queue: %v\n", err)
+	}
+
+	return nil
 }
 
 func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticket *models.Ticket, err error) {

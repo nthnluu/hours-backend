@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"signmeup/internal/auth"
 	"signmeup/internal/models"
-	"signmeup/internal/qerrors"
 	repo "signmeup/internal/repository"
 
 	"github.com/go-chi/chi/v5"
@@ -118,11 +117,6 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 
 	ticket, err := repo.Repository.CreateTicket(&req)
 	if err != nil {
-		if err == qerrors.CutoffQueueError {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

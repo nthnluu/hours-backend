@@ -46,7 +46,7 @@ func RequireAdminForCourse(courseURLParam string) func(handler http.Handler) htt
 	}
 }
 
-func RequireStaffForQueue(queueURLParam string) func(handler http.Handler) http.Handler {
+func RequireStaffForQueue() func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := GetUserFromRequest(r)
@@ -55,7 +55,7 @@ func RequireStaffForQueue(queueURLParam string) func(handler http.Handler) http.
 				return
 			}
 
-			qID := chi.URLParam(r, queueURLParam)
+			qID := r.Context().Value("queueID").(string)
 			q, err := repo.Repository.GetQueue(qID)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)

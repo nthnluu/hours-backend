@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -14,23 +15,40 @@ import (
 
 func QueueRoutes() *chi.Mux {
 	router := chi.NewRouter()
-
 	router.Use(auth.AuthCtx())
 
 	// Queue creation
 	// TODO: handle permissions here
 	router.Post("/create", createQueueHandler)
-	router.With(auth.RequireStaffForQueue("queueID")).Post("/edit/{queueID}", editQueueHandler)
-	router.With(auth.RequireStaffForQueue("queueID")).Post("/delete/{queueID}", deleteQueueHandler)
-	router.With(auth.RequireStaffForQueue("queueID")).Post("/cutoff/{queueID}", cutoffQueueHandler)
-	router.With(auth.RequireStaffForQueue("queueID")).Post("/shuffle/{queueID}", shuffleQueueHandler)
 
-	// Ticket modification
-	router.Post("/ticket/create/{queueID}", createTicketHandler)
-	router.Post("/ticket/edit/{queueID}", editTicketHandler)
-	router.Post("/ticket/delete/{queueID}", deleteTicketHandler)
+	router.Route("/{queueID}", func(r chi.Router) {
+		// Sets "queueID" from URL param in the context
+		r.Use(QueueCtx())
+
+		// Queue modification
+		router.With(auth.RequireStaffForQueue()).Put("/edit", editQueueHandler)
+		router.With(auth.RequireStaffForQueue()).Patch("/cutoff", cutoffQueueHandler)
+		router.With(auth.RequireStaffForQueue()).Patch("/shuffle", shuffleQueueHandler)
+		router.With(auth.RequireStaffForQueue()).Delete("/", deleteQueueHandler)
+
+		// Ticket modification
+		router.Post("/ticket", createTicketHandler)
+		router.Patch("/ticket", editTicketHandler)
+		router.Delete("/ticket", deleteTicketHandler)
+	})
 
 	return router
+}
+
+func QueueCtx() func(handler http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			queueID := chi.URLParam(r, "queueID")
+
+			ctx := context.WithValue(r.Context(), "queueID", queueID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 // POST: /create

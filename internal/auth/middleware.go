@@ -14,7 +14,7 @@ import (
 
 // AuthCtx is a middleware that extracts the user's session cookie, verifies it, and places the current
 // user into the context used for the rest of the request.
-func AuthCtx() func(handler http.Handler) http.Handler {
+func AuthCtx() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenCookie, err := r.Cookie(config.Config.SessionCookieName)
@@ -42,7 +42,7 @@ func AuthCtx() func(handler http.Handler) http.Handler {
 	}
 }
 
-func RequireMetaAdmin() func(handler http.Handler) http.Handler {
+func RequireMetaAdmin() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := GetUserFromRequest(r)

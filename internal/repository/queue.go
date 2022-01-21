@@ -24,7 +24,6 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		Description: c.Description,
 		CourseID:    queueCourse.ID,
 		Course:      queueCourse,
-		IsActive:    true,
 		IsCutOff:    false,
 	}
 
@@ -38,7 +37,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"code":  queue.Course.Code,
 		},
 		"tickets":  []string{},
-		"isActive": queue.IsActive,
+		"isCutOff": queue.IsCutOff,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -59,8 +58,8 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 			Path:  "description",
 			Value: c.Description,
 		}, {
-			Path:  "isActive",
-			Value: c.IsActive,
+			Path:  "isCutOff",
+			Value: c.IsCutOff,
 		},
 	})
 	return err

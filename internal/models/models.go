@@ -121,9 +121,6 @@ type Queue struct {
 	Course      *Course  `json:"course" mapstructure:"course,omitempty"`
 	IsCutOff    bool     `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
 	Tickets     []string `json:"tickets" mapstructure:"tickets"`
-
-	// Deprecated
-	IsActive bool `json:"isActive" mapstructure:"isActive"`
 }
 
 type TicketStatus string
@@ -156,7 +153,7 @@ type EditQueueRequest struct {
 	QueueID     string `json:"queueID,omitempty"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	IsActive    bool   `json:"isActive"`
+	IsCutOff    bool   `json:"isCutOff"`
 }
 
 // DeleteQueueRequest is the parameter struct to the CreateQueue function.

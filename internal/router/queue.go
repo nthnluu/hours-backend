@@ -21,9 +21,9 @@ func QueueRoutes() *chi.Mux {
 	// We can't do /{courseID}/create since that will conflate with the ^/{queueID} routes
 	router.With(middleware.CourseCtx(), auth.RequireStaffForCourse()).Post("/create/{courseID}", createQueueHandler)
 
-	router.Route("/{queueID}", func(r chi.Router) {
+	router.Route("/{queueID}", func(router chi.Router) {
 		// Sets "queueID" from URL param in the context
-		r.Use(middleware.QueueCtx())
+		router.Use(middleware.QueueCtx())
 
 		// Queue modification
 		router.With(auth.RequireQueueStaff()).Put("/edit", editQueueHandler)

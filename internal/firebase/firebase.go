@@ -2,6 +2,7 @@ package firebase
 
 import (
 	"context"
+
 	firebaseSDK "firebase.google.com/go"
 	"google.golang.org/api/option"
 )
@@ -12,7 +13,7 @@ var FirebaseContext context.Context
 
 func initializeFirebaseApp() {
 	ctx := context.Background()
-	opt := option.WithCredentialsFile("signmeup-46c73-firebase-adminsdk-9mll6-d60aa0677c.json")
+	opt := option.WithCredentialsFile("firebase-config.json")
 	app, err := firebaseSDK.NewApp(ctx, nil, opt)
 	if err != nil {
 		panic(err.Error())

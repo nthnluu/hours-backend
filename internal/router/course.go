@@ -21,7 +21,7 @@ func CourseRoutes() *chi.Mux {
 	router.With(auth.RequireAdmin()).Post("/create", createCourseHandler)
 
 	// Get metadata about a course
-	router.Route("/{courseID}", func(r chi.Router) {
+	router.Route("/{courseID}", func(router chi.Router) {
 		router.Use(middleware.CourseCtx())
 
 		// Anybody authed can read a course

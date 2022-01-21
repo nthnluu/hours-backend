@@ -26,7 +26,7 @@ func QueueRoutes() *chi.Mux {
 		router.Use(middleware.QueueCtx())
 
 		// Queue modification
-		router.With(auth.RequireQueueStaff()).Put("/edit", editQueueHandler)
+		router.With(auth.RequireQueueStaff()).Post("/edit", editQueueHandler)
 		router.With(auth.RequireQueueStaff()).Patch("/cutoff", cutoffQueueHandler)
 		router.With(auth.RequireQueueStaff()).Patch("/shuffle", shuffleQueueHandler)
 		router.With(auth.RequireQueueStaff()).Delete("/", deleteQueueHandler)

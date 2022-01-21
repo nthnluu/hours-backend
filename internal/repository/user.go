@@ -121,39 +121,44 @@ func (fr *FirebaseRepository) GetIDByEmail(email string) (string, error) {
 	return data["id"].(string), nil
 }
 
-func (fr *FirebaseRepository) UpdateUser(user *models.UpdateUserRequest) error {
-	var err error
-	if user.DisplayName == "" {
-		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
-			{
-				Path:  "isAdmin",
-				Value: user.IsAdmin,
-			},
-		})
-	} else {
-		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
-			{
-				Path:  "displayName",
-				Value: user.DisplayName,
-			}, {
-				Path:  "isAdmin",
-				Value: user.IsAdmin,
-			},
-		})
+func (fr *FirebaseRepository) UpdateUser(r *models.UpdateUserRequest) error {
+	if r.DisplayName == "" {
+		return qerrors.InvalidDisplayName
 	}
+
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(r.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "displayName",
+			Value: r.DisplayName,
+		},
+		{
+			Path:  "pronouns",
+			Value: r.Pronouns,
+		},
+		{
+			Path:  "meetingLink",
+			Value: r.MeetingLink,
+		},
+	})
+
 	return err
 }
 
 // GetUserByID retrieves the User associated with the given ID.
-func (fr *FirebaseRepository) UpdateUserByEmail(u *models.UpdateUserByEmailRequest) error {
+func (fr *FirebaseRepository) MakeAdminByEmail(u *models.MakeAdminByEmailRequest) error {
 	user, err := fr.GetUserByEmail(u.Email)
 	if err != nil {
 		return err
 	}
-	return fr.UpdateUser(&models.UpdateUserRequest{
-		ID:      user.ID,
-		IsAdmin: u.IsAdmin,
+
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "isAdmin",
+			Value: u.IsAdmin,
+		},
 	})
+
+	return err
 }
 
 func (fr *FirebaseRepository) Count() int {

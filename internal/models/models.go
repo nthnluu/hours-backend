@@ -49,13 +49,15 @@ type CreateUserRequest struct {
 
 // UpdateUserRequest is the parameter struct for the UpdateUser function.
 type UpdateUserRequest struct {
-	ID          string `json:"id,omitempty"`
+	// Will be set from context
+	UserID      string `json:",omitempty"`
 	DisplayName string `json:"displayName"`
-	IsAdmin     bool   `json:"isAdmin"`
+	Pronouns    string `json:"pronouns"`
+	MeetingLink string `json:"meetingLink"`
 }
 
 // UpdateUserRequest is the parameter struct for the UpdateUser function.
-type UpdateUserByEmailRequest struct {
+type MakeAdminByEmailRequest struct {
 	Email   string `json:"email"`
 	IsAdmin bool   `json:"isAdmin"`
 }

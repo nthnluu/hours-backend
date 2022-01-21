@@ -26,11 +26,8 @@ func AuthRoutes() *chi.Mux {
 		router.With(auth.AuthCtx()).Get("/{userID}", getUserHandler)
 
 		// Update the current user's information
-		//
-		// TODO: these handlers need to operate on the current user's ID, not the one they pass
-		// TODO: do not merge without figuring out.
-		router.Post("/update/{userID}", updateUserHandler)
-		router.Post("/updateByEmail", updateUserByEmailHandler)
+		router.Post("/update", updateUserHandler)
+		router.With(auth.RequireAdmin()).Post("/updateByEmail", updateUserByEmailHandler)
 	})
 
 	// Alter the current session. No auth middlewares required.
@@ -73,7 +70,7 @@ func getUserHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, user)
 }
 
-// POST: /update/{userId}
+// POST: /update
 func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.UpdateUserRequest
 
@@ -82,7 +79,12 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.ID = chi.URLParam(r, "userID")
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	req.UserID = user.ID
 
 	err = repo.Repository.UpdateUser(req)
 	if err != nil {
@@ -91,12 +93,12 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-	w.Write([]byte("Successfully edited user " + req.ID))
+	w.Write([]byte("Successfully edited user " + req.UserID))
 }
 
 // POST: /updateByEmail
 func updateUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
-	var req *models.UpdateUserByEmailRequest
+	var req *models.MakeAdminByEmailRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -104,7 +106,7 @@ func updateUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repo.Repository.UpdateUserByEmail(req)
+	err = repo.Repository.MakeAdminByEmail(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

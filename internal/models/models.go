@@ -166,7 +166,7 @@ type DeleteQueueRequest struct {
 
 // CutoffQueueRequest is the parameter struct to the CutoffQueue function.
 type CutoffQueueRequest struct {
-	IsCutoff bool   `json:"isCutOff"`
+	IsCutOff bool   `json:"isCutOff"`
 	CourseID string `json:"courseID"`
 }
 

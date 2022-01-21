@@ -80,7 +80,7 @@ func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
 	}
 
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(q.ID).Update(firebase.FirebaseContext, []firestore.Update{
-		{Path: "isCutOff", Value: c.IsCutoff},
+		{Path: "isCutOff", Value: c.IsCutOff},
 	})
 	return err
 }

@@ -80,17 +80,15 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 		profile = &models.Profile{
 			DisplayName: fbUser.DisplayName,
 			Email:       fbUser.Email,
-			PhoneNumber: "",
-			PhotoURL:    "",
 			// if there are no registered users, make the first one an admin
 			IsAdmin: fr.getUserCount() == 0,
 		}
 		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
 			"coursePermissions": make(map[string]models.CoursePermission),
-			"displayName": profile.DisplayName,
-			"email":       profile.Email,
-			"id":          fbUser.UID,
-			"isAdmin":     profile.IsAdmin,
+			"displayName":       profile.DisplayName,
+			"email":             profile.Email,
+			"id":                fbUser.UID,
+			"isAdmin":           profile.IsAdmin,
 		})
 
 		if err != nil {
@@ -221,8 +219,6 @@ func (fr *FirebaseRepository) Create(user *models.CreateUserRequest) (*models.Us
 	profile := &models.Profile{
 		DisplayName: user.DisplayName,
 		Email:       user.Email,
-		PhoneNumber: "",
-		PhotoURL:    "",
 	}
 	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
 		"permissions": []string{},

@@ -23,8 +23,10 @@ type Profile struct {
 	DisplayName string `json:"displayName" mapstructure:"displayName"`
 	Email       string `json:"email" mapstructure:"email"`
 	PhoneNumber string `json:"phoneNumber,omitempty" mapstructure:"phoneNumber"`
-	PhotoURL    string `json:"photoUrl" mapstructure:"photoUrl"`
-	IsAdmin     bool   `json:"isAdmin" mapstructure:"isAdmin"`
+	PhotoURL    string `json:"photoUrl,omitempty" mapstructure:"photoUrl"`
+	IsAdmin     bool   `json:"isAdmin,omitempty" mapstructure:"isAdmin"`
+	Pronouns    string `json:"pronouns,omitempty" mapstructure:"pronouns"`
+	MeetingLink string `json:"meetingLink,omitempty" mapstructure:"meetingLink"`
 	// Map from course ID to CoursePermission
 	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions"`
 }

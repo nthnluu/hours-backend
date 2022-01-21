@@ -26,6 +26,7 @@ func AuthRoutes() *chi.Mux {
 		router.With(auth.AuthCtx()).Get("/{userID}", getUserHandler)
 
 		// Update the current user's information
+		//
 		// TODO: these handlers need to operate on the current user's ID, not the one they pass
 		// TODO: do not merge without figuring out.
 		router.Post("/update/{userID}", updateUserHandler)

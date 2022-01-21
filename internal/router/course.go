@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"signmeup/internal/auth"
+	"signmeup/internal/middleware"
 	"signmeup/internal/models"
 	repo "signmeup/internal/repository"
 
@@ -13,30 +14,34 @@ import (
 
 func CourseRoutes() *chi.Mux {
 	router := chi.NewRouter()
-
 	// All course routes require authentication.
 	router.Use(auth.AuthCtx())
 
-	// Get metadata about a course
-	router.Get("/{courseID}", getCourseHandler)
-
 	// Modifying courses themselves
-	// TODO: Is this permission right?
-	// TODO: Address this before merging.
-	router.With(auth.RequireMetaAdmin()).Post("/create", createCourseHandler)
-	router.With(auth.RequireAdminForCourse("courseID")).Post("/delete/{courseID}", deleteCourseHandler)
-	router.With(auth.RequireAdminForCourse("courseID")).Post("/edit/{courseID}", editCourseHandler)
+	router.With(auth.RequireAdmin()).Post("/create", createCourseHandler)
 
-	// Course permissions
-	router.With(auth.RequireAdminForCourse("courseID")).Post("/addPermission/{courseID}", addCoursePermissionHandler)
-	router.With(auth.RequireAdminForCourse("courseID")).Post("/removePermission/{courseID}", removeCoursePermissionHandler)
+	// Get metadata about a course
+	router.Route("/{courseID}", func(r chi.Router) {
+		router.Use(middleware.CourseCtx())
+
+		// Anybody authed can read a course
+		router.Get("/", getCourseHandler)
+
+		// Only Admins can delete a course
+		router.With(auth.RequireAdmin()).Delete("/", deleteCourseHandler)
+
+		// Course modification
+		router.With(auth.RequireCourseAdmin()).Post("/edit", editCourseHandler)
+		router.With(auth.RequireCourseAdmin()).Post("/addPermission", addCoursePermissionHandler)
+		router.With(auth.RequireCourseAdmin()).Post("/removePermission", removeCoursePermissionHandler)
+	})
 
 	return router
 }
 
 // GET: /{courseID}
 func getCourseHandler(w http.ResponseWriter, r *http.Request) {
-	courseID := chi.URLParam(r, "courseID")
+	courseID := r.Context().Value("courseID").(string)
 
 	course, err := repo.Repository.GetCourseByID(courseID)
 	if err != nil {
@@ -72,9 +77,9 @@ func createCourseHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, c)
 }
 
-// POST: /delete/{courseID}
+// DELETE: /{courseID}
 func deleteCourseHandler(w http.ResponseWriter, r *http.Request) {
-	courseID := chi.URLParam(r, "courseID")
+	courseID := r.Context().Value("courseID").(string)
 
 	err := repo.Repository.DeleteCourse(&models.DeleteCourseRequest{courseID})
 	if err != nil {
@@ -86,7 +91,7 @@ func deleteCourseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Successfully deleted course " + courseID))
 }
 
-// POST: /edit/{courseID}
+// POST: /{courseID}/edit
 func editCourseHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.EditCourseRequest
 
@@ -95,7 +100,7 @@ func editCourseHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.CourseID = chi.URLParam(r, "courseID")
+	req.CourseID = r.Context().Value("courseID").(string)
 
 	err = repo.Repository.EditCourse(req)
 	if err != nil {
@@ -107,7 +112,7 @@ func editCourseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Successfully edited course " + req.CourseID))
 }
 
-// POST: /addPermission/{courseID}
+// POST: /{courseID}/addPermission
 func addCoursePermissionHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.AddCoursePermissionRequest
 
@@ -116,7 +121,7 @@ func addCoursePermissionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.CourseID = chi.URLParam(r, "courseID")
+	req.CourseID = r.Context().Value("courseID").(string)
 
 	err = repo.Repository.AddPermission(req)
 	if err != nil {
@@ -128,7 +133,7 @@ func addCoursePermissionHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Successfully added course permission to " + req.CourseID))
 }
 
-// POST: /removePermission/{courseID}
+// POST: /{courseID}/removePermission
 func removeCoursePermissionHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.RemoveCoursePermissionRequest
 
@@ -137,7 +142,7 @@ func removeCoursePermissionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.CourseID = chi.URLParam(r, "courseID")
+	req.CourseID = r.Context().Value("courseID").(string)
 
 	err = repo.Repository.RemovePermission(req)
 	if err != nil {

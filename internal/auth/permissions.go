@@ -4,11 +4,9 @@ import (
 	"net/http"
 	"signmeup/internal/models"
 	repo "signmeup/internal/repository"
-
-	"github.com/go-chi/chi/v5"
 )
 
-func RequireStaffForCourse(courseURLParam string) func(handler http.Handler) http.Handler {
+func RequireStaffForCourse() func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := GetUserFromRequest(r)
@@ -17,7 +15,8 @@ func RequireStaffForCourse(courseURLParam string) func(handler http.Handler) htt
 				return
 			}
 
-			if !isStaffForCourse(user, chi.URLParam(r, courseURLParam)) {
+			courseID := r.Context().Value("courseID").(string)
+			if !isStaffForCourse(user, courseID) {
 				rejectForbiddenRequest(w)
 				return
 			}
@@ -27,7 +26,7 @@ func RequireStaffForCourse(courseURLParam string) func(handler http.Handler) htt
 	}
 }
 
-func RequireAdminForCourse(courseURLParam string) func(handler http.Handler) http.Handler {
+func RequireCourseAdmin() func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := GetUserFromRequest(r)
@@ -36,7 +35,8 @@ func RequireAdminForCourse(courseURLParam string) func(handler http.Handler) htt
 				return
 			}
 
-			if !isAdminForCourse(user, chi.URLParam(r, courseURLParam)) {
+			courseID := r.Context().Value("courseID").(string)
+			if !isAdminForCourse(user, courseID) {
 				rejectForbiddenRequest(w)
 				return
 			}
@@ -46,7 +46,7 @@ func RequireAdminForCourse(courseURLParam string) func(handler http.Handler) htt
 	}
 }
 
-func RequireStaffForQueue() func(handler http.Handler) http.Handler {
+func RequireQueueStaff() func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := GetUserFromRequest(r)

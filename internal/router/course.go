@@ -121,7 +121,7 @@ func addCoursePermissionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.CourseID = r.Context().Value("courseID").(string)
+	req.CourseID = chi.URLParam(r, "courseID")
 
 	err = repo.Repository.AddPermission(req)
 	if err != nil {

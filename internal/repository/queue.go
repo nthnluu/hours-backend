@@ -22,6 +22,8 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 	queue = &models.Queue{
 		Title:       c.Title,
 		Description: c.Description,
+		Location:    c.Location,
+		EndTime:     c.EndTime,
 		CourseID:    queueCourse.ID,
 		Course:      queueCourse,
 		IsCutOff:    false,
@@ -30,6 +32,8 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
 		"title":       queue.Title,
 		"description": queue.Description,
+		"location":    queue.Location,
+		"endTime":     queue.EndTime,
 		"courseID":    queue.CourseID,
 		"course": map[string]interface{}{
 			"id":    queue.Course.ID,

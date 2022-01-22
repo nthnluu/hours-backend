@@ -48,10 +48,12 @@ type CreateQueueRequest struct {
 
 // EditQueueRequest is the parameter struct to the EditQueue function.
 type EditQueueRequest struct {
-	QueueID     string `json:"queueID,omitempty"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	IsCutOff    bool   `json:"isCutOff"`
+	QueueID     string    `json:"queueID,omitempty"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Location    string    `json:"location"`
+	EndTime     time.Time `json:"endTime"`
+	IsCutOff    bool      `json:"isCutOff"`
 }
 
 // DeleteQueueRequest is the parameter struct to the CreateQueue function.

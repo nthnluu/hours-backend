@@ -62,6 +62,12 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 			Path:  "description",
 			Value: c.Description,
 		}, {
+			Path:  "endTime",
+			Value: c.EndTime,
+		}, {
+			Path:  "location",
+			Value: c.Location,
+		}, {
 			Path:  "isCutOff",
 			Value: c.IsCutOff,
 		},

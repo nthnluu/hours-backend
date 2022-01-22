@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"signmeup/internal/config"
 	"signmeup/internal/firebase"
@@ -32,11 +33,16 @@ func (fr *FirebaseRepository) initializeUserProfilesListener() {
 	}
 
 	done := make(chan bool)
-	go fr.createCollectionInitializer(models.FirestoreUserProfilesCollection, &done, handleDoc)
+	go func() {
+		err := fr.createCollectionInitializer(models.FirestoreUserProfilesCollection, &done, handleDoc)
+		if err != nil {
+			log.Panicf("error creating user profiles collection listener: %v\n", err)
+		}
+	}()
 	<-done
 }
 
-// verifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.
+// VerifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.
 func (fr *FirebaseRepository) VerifySessionCookie(sessionCookie *http.Cookie) (*models.User, error) {
 	decoded, err := fr.authClient.VerifySessionCookieAndCheckRevoked(firebase.FirebaseContext, sessionCookie.Value)
 
@@ -80,6 +86,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 		profile = &models.Profile{
 			DisplayName: fbUser.DisplayName,
 			Email:       fbUser.Email,
+			PhotoURL:    fbUser.PhotoURL,
 			// if there are no registered users, make the first one an admin
 			IsAdmin: fr.getUserCount() == 0,
 		}
@@ -87,6 +94,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 			"coursePermissions": make(map[string]models.CoursePermission),
 			"displayName":       profile.DisplayName,
 			"email":             profile.Email,
+			"photoUrl":          profile.PhotoURL,
 			"id":                fbUser.UID,
 			"isAdmin":           profile.IsAdmin,
 		})
@@ -99,7 +107,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 	return fbUserToUserRecord(fbUser, profile), nil
 }
 
-// GetUserByID retrieves the User associated with the given ID.
+// GetUserByEmail retrieves the User associated with the given email.
 func (fr *FirebaseRepository) GetUserByEmail(email string) (*models.User, error) {
 	userID, err := fr.GetIDByEmail(email)
 	if err != nil {
@@ -144,7 +152,7 @@ func (fr *FirebaseRepository) UpdateUser(r *models.UpdateUserRequest) error {
 	return err
 }
 
-// GetUserByID retrieves the User associated with the given ID.
+// MakeAdminByEmail makes the user with the given email a site admin.
 func (fr *FirebaseRepository) MakeAdminByEmail(u *models.MakeAdminByEmailRequest) error {
 	user, err := fr.GetUserByEmail(u.Email)
 	if err != nil {
@@ -162,7 +170,8 @@ func (fr *FirebaseRepository) MakeAdminByEmail(u *models.MakeAdminByEmailRequest
 }
 
 func (fr *FirebaseRepository) Count() int {
-	// TODO: Should we lock this?
+	fr.profilesLock.RLock()
+	defer fr.profilesLock.RUnlock()
 	return len(fr.profiles)
 }
 
@@ -191,6 +200,7 @@ func (fr *FirebaseRepository) List() ([]*models.User, error) {
 }
 
 // Operations
+
 // Validate checks a CreateUserRequest struct for errors.
 func validate(u *models.CreateUserRequest) error {
 	if err := validateEmail(u.Email); err != nil {

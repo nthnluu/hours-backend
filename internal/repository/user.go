@@ -22,12 +22,17 @@ func (fr *FirebaseRepository) initializeUserProfilesListener() {
 		fr.profilesLock.Lock()
 		defer fr.profilesLock.Unlock()
 
-		var userProfile models.Profile
-		err := mapstructure.Decode(doc.Data(), &userProfile)
-		if err != nil {
-			return err
+		if doc.Exists() {
+			var userProfile models.Profile
+			err := mapstructure.Decode(doc.Data(), &userProfile)
+			if err != nil {
+				return err
+			}
+			fr.profiles[doc.Ref.ID] = &userProfile
+		} else {
+			// doc doesn't exist, might have been deleted. delete from mapping.
+			delete(fr.profiles, doc.Ref.ID)
 		}
-		fr.profiles[doc.Ref.ID] = &userProfile
 
 		return nil
 	}

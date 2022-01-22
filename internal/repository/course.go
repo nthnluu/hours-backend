@@ -39,7 +39,7 @@ func (fr *FirebaseRepository) initializeCoursesListener() {
 	<-done
 }
 
-// getCourse gets the Course from the courses map corresponding to the provided course ID.
+// GetCourseByID gets the Course from the courses map corresponding to the provided course ID.
 func (fr *FirebaseRepository) GetCourseByID(ID string) (*models.Course, error) {
 	fr.coursesLock.RLock()
 	defer fr.coursesLock.RUnlock()

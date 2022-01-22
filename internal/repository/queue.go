@@ -227,20 +227,25 @@ func (fr *FirebaseRepository) initializeQueuesListener() {
 		fr.queuesLock.Lock()
 		defer fr.queuesLock.Unlock()
 
-		var q models.Queue
-		err := mapstructure.Decode(doc.Data(), &q)
-		if err != nil {
-			return err
-		}
+		if doc.Exists() {
+			var q models.Queue
+			err := mapstructure.Decode(doc.Data(), &q)
+			if err != nil {
+				return err
+			}
 
-		c, err := fr.GetCourseByID(q.CourseID)
-		if err != nil {
-			fmt.Println(q.CourseID)
-			return err
-		}
+			c, err := fr.GetCourseByID(q.CourseID)
+			if err != nil {
+				fmt.Println(q.CourseID)
+				return err
+			}
 
-		q.Course = c
-		fr.queues[doc.Ref.ID] = &q
+			q.Course = c
+			fr.queues[doc.Ref.ID] = &q
+		} else {
+			// doc doesn't exist, might have been deleted. delete from mapping.
+			delete(fr.queues, doc.Ref.ID)
+		}
 
 		return nil
 	}

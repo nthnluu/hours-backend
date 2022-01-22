@@ -299,7 +299,6 @@ func (fr *FirebaseRepository) getUserProfile(id string) (*models.Profile, error)
 func (fr *FirebaseRepository) getUserCount() int {
 	fr.profilesLock.RLock()
 	defer fr.profilesLock.RUnlock()
-
 	return len(fr.profiles)
 }
 

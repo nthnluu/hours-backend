@@ -100,6 +100,8 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 			"displayName":       profile.DisplayName,
 			"email":             profile.Email,
 			"photoUrl":          profile.PhotoURL,
+			"meetingLink":       "",
+			"pronouns":          "",
 			"id":                fbUser.UID,
 			"isAdmin":           profile.IsAdmin,
 		})

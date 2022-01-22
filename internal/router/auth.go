@@ -26,7 +26,7 @@ func AuthRoutes() *chi.Mux {
 		router.With(auth.AuthCtx()).Get("/{userID}", getUserHandler)
 
 		// Update the current user's information
-		router.Post("/update", updateUserHandler)
+		router.With(auth.AuthCtx()).Post("/update", updateUserHandler)
 		router.With(auth.RequireAdmin()).Post("/updateByEmail", updateUserByEmailHandler)
 	})
 

@@ -81,7 +81,7 @@ func createCourseHandler(w http.ResponseWriter, r *http.Request) {
 func deleteCourseHandler(w http.ResponseWriter, r *http.Request) {
 	courseID := r.Context().Value("courseID").(string)
 
-	err := repo.Repository.DeleteCourse(&models.DeleteCourseRequest{courseID})
+	err := repo.Repository.DeleteCourse(&models.DeleteCourseRequest{CourseID: courseID})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -65,7 +65,6 @@ func (fr *FirebaseRepository) CreateCourse(c *models.CreateCourseRequest) (cours
 		CoursePermissions: map[string]models.CoursePermission{},
 	}
 
-	course.CoursePermissions[c.CreatedBy.ID] = models.CourseAdmin
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
 		"title":             course.Title,
 		"code":              course.Code,
@@ -78,16 +77,6 @@ func (fr *FirebaseRepository) CreateCourse(c *models.CreateCourseRequest) (cours
 	}
 	course.ID = ref.ID
 
-	// update user profile to include new permission
-	// TODO(n-young): refactor when update user is implmted. :)
-	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.CreatedBy.ID).Set(firebase.FirebaseContext, map[string]interface{}{
-		"coursePermissions": map[string]interface{}{
-			course.ID: models.CourseAdmin,
-		},
-	}, firestore.MergeAll)
-	if err != nil {
-		return nil, err
-	}
 	return course, nil
 }
 

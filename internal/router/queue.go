@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"signmeup/internal/auth"
+	"signmeup/internal/middleware"
 	"signmeup/internal/models"
 	repo "signmeup/internal/repository"
 
@@ -14,25 +15,32 @@ import (
 
 func QueueRoutes() *chi.Mux {
 	router := chi.NewRouter()
+	router.Use(auth.AuthCtx())
 
 	// Queue creation
-	router.With(auth.RequireAuth(false)).Post("/create", createQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/edit/{queueID}", editQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/delete/{queueID}", deleteQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/cutoff/{queueID}", cutoffQueueHandler)
-	router.With(auth.RequireAuth(false)).Post("/shuffle/{queueID}", shuffleQueueHandler)
+	// We can't do /{courseID}/create since that will conflate with the ^/{queueID} routes
+	router.With(middleware.CourseCtx(), auth.RequireStaffForCourse()).Post("/create/{courseID}", createQueueHandler)
 
-	// Ticket modification
-	// TODO(neil): Make this more semantically REST-y!
-	// TODO: have ticketID in the edit/delete routes
-	router.With(auth.RequireAuth(false)).Post("/ticket/create/{queueID}", createTicketHandler)
-	router.With(auth.RequireAuth(false)).Post("/ticket/edit/{queueID}", editTicketHandler)
-	router.With(auth.RequireAuth(false)).Post("/ticket/delete/{queueID}", deleteTicketHandler)
+	router.Route("/{queueID}", func(router chi.Router) {
+		// Sets "queueID" from URL param in the context
+		router.Use(middleware.QueueCtx())
+
+		// Queue modification
+		router.With(auth.RequireQueueStaff()).Post("/edit", editQueueHandler)
+		router.With(auth.RequireQueueStaff()).Patch("/cutoff", cutoffQueueHandler)
+		router.With(auth.RequireQueueStaff()).Patch("/shuffle", shuffleQueueHandler)
+		router.With(auth.RequireQueueStaff()).Delete("/", deleteQueueHandler)
+
+		// Ticket modification
+		router.Post("/ticket", createTicketHandler)
+		router.Patch("/ticket", editTicketHandler)
+		router.Post("/ticket/delete", deleteTicketHandler)
+	})
 
 	return router
 }
 
-// POST: /create
+// POST: /{courseID}/create
 func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateQueueRequest
 
@@ -41,6 +49,7 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	req.CourseID = r.Context().Value("courseID").(string)
 
 	queue, err := repo.Repository.CreateQueue(&req)
 	if err != nil {
@@ -55,10 +64,14 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 func shuffleQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.ShuffleQueueRequest
 
-	queueID := chi.URLParam(r, "queueID")
-	req.QueueID = queueID
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	req.QueueID = r.Context().Value("queueID").(string)
 
-	err := repo.Repository.ShuffleQueue(req)
+	err = repo.Repository.ShuffleQueue(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -71,8 +84,14 @@ func shuffleQueueHandler(w http.ResponseWriter, r *http.Request) {
 func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.EditQueueRequest
 
-	req.QueueID = chi.URLParam(r, "queueID")
-	err := repo.Repository.EditQueue(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	req.QueueID = r.Context().Value("queueID").(string)
+
+	err = repo.Repository.EditQueue(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -104,7 +123,8 @@ func cutoffQueueHandler(w http.ResponseWriter, r *http.Request) {
 // POST: /delete
 func deleteQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.DeleteQueueRequest
-	req.QueueID = chi.URLParam(r, "queueID")
+
+	req.QueueID = r.Context().Value("queueID").(string)
 	err := repo.Repository.DeleteQueue(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -118,7 +138,6 @@ func deleteQueueHandler(w http.ResponseWriter, r *http.Request) {
 // POST: /ticket/create/{queueID}
 func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateTicketRequest
-	queueID := chi.URLParam(r, "queueID")
 
 	user, err := auth.GetUserFromRequest(r)
 	if err != nil {
@@ -130,7 +149,8 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.QueueID = queueID
+
+	req.QueueID = chi.URLParam(r, "queueID")
 	req.CreatedBy = user
 
 	ticket, err := repo.Repository.CreateTicket(&req)
@@ -145,14 +165,13 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 // POST: /ticket/edit/{queueID}
 func editTicketHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.EditTicketRequest
+
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	queueID := chi.URLParam(r, "queueID")
-	req.QueueID = queueID
+	req.QueueID = chi.URLParam(r, "queueID")
 
 	err = repo.Repository.EditTicket(req)
 	if err != nil {
@@ -168,14 +187,13 @@ func editTicketHandler(w http.ResponseWriter, r *http.Request) {
 // POST: /ticket/delete/{queueID}
 func deleteTicketHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.DeleteTicketRequest
+
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	queueID := chi.URLParam(r, "queueID")
-	req.QueueID = queueID
+	req.QueueID = r.Context().Value("queueID").(string)
 
 	err = repo.Repository.DeleteTicket(req)
 	if err != nil {

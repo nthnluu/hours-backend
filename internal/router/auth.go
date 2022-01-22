@@ -17,15 +17,20 @@ import (
 func AuthRoutes() *chi.Mux {
 	router := chi.NewRouter()
 
-	// Information about the current user
-	router.With(auth.RequireAuth(false)).Get("/me", getMeHandler)
-	router.With(auth.RequireAuth(false)).Get("/{userID}", getUserHandler)
+	// Auth routes that require authentication
+	router.Route("/", func(r chi.Router) {
+		r.Use(auth.AuthCtx())
 
-	// Update the current user's information
-	router.With(auth.RequireAuth(true)).Post("/update/{userID}", updateUserHandler)
-	router.With(auth.RequireAuth(true)).Post("/updateByEmail", updateUserByEmailHandler)
+		// Information about the current user
+		router.With(auth.AuthCtx()).Get("/me", getMeHandler)
+		router.With(auth.AuthCtx()).Get("/{userID}", getUserHandler)
 
-	// Alter the current session
+		// Update the current user's information
+		router.Post("/update", updateUserHandler)
+		router.With(auth.RequireAdmin()).Post("/updateByEmail", updateUserByEmailHandler)
+	})
+
+	// Alter the current session. No auth middlewares required.
 	router.Post("/session", createSessionHandler)
 	router.Post("/signout", signOutHandler)
 
@@ -65,7 +70,7 @@ func getUserHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, user)
 }
 
-// POST: /update/{userId}
+// POST: /update
 func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.UpdateUserRequest
 
@@ -74,7 +79,12 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.ID = chi.URLParam(r, "userID")
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	req.UserID = user.ID
 
 	err = repo.Repository.UpdateUser(req)
 	if err != nil {
@@ -83,12 +93,12 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-	w.Write([]byte("Successfully edited user " + req.ID))
+	w.Write([]byte("Successfully edited user " + req.UserID))
 }
 
 // POST: /updateByEmail
 func updateUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
-	var req *models.UpdateUserByEmailRequest
+	var req *models.MakeAdminByEmailRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -96,7 +106,7 @@ func updateUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repo.Repository.UpdateUserByEmail(req)
+	err = repo.Repository.MakeAdminByEmail(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

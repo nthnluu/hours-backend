@@ -22,15 +22,18 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 	queue = &models.Queue{
 		Title:       c.Title,
 		Description: c.Description,
+		Location:    c.Location,
+		EndTime:     c.EndTime,
 		CourseID:    queueCourse.ID,
 		Course:      queueCourse,
-		IsActive:    true,
 		IsCutOff:    false,
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
 		"title":       queue.Title,
 		"description": queue.Description,
+		"location":    queue.Location,
+		"endTime":     queue.EndTime,
 		"courseID":    queue.CourseID,
 		"course": map[string]interface{}{
 			"id":    queue.Course.ID,
@@ -38,7 +41,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"code":  queue.Course.Code,
 		},
 		"tickets":  []string{},
-		"isActive": queue.IsActive,
+		"isCutOff": queue.IsCutOff,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -59,8 +62,14 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 			Path:  "description",
 			Value: c.Description,
 		}, {
-			Path:  "isActive",
-			Value: c.IsActive,
+			Path:  "endTime",
+			Value: c.EndTime,
+		}, {
+			Path:  "location",
+			Value: c.Location,
+		}, {
+			Path:  "isCutOff",
+			Value: c.IsCutOff,
 		},
 	})
 	return err
@@ -80,13 +89,13 @@ func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
 	}
 
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(q.ID).Update(firebase.FirebaseContext, []firestore.Update{
-		{Path: "isCutOff", Value: c.IsCutoff},
+		{Path: "isCutOff", Value: c.IsCutOff},
 	})
 	return err
 }
 
 func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error {
-	q, err := fr.getQueue(c.QueueID)
+	q, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
@@ -111,7 +120,7 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 
 func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticket *models.Ticket, err error) {
 	// Get the queue that this ticket belongs to.
-	queue, err := fr.getQueue(c.QueueID)
+	queue, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return nil, qerrors.InvalidQueueError
 	}
@@ -150,7 +159,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 	// Validate that this is a valid queue.
-	_, err := fr.getQueue(c.QueueID)
+	_, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
@@ -179,7 +188,7 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 
 func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error {
 	// Validate that this is a valid queue.
-	_, err := fr.getQueue(c.QueueID)
+	_, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
@@ -200,15 +209,15 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 	return err
 }
 
-// getQueue gets the Queue from the queues map corresponding to the provided queue ID.
-func (fr *FirebaseRepository) getQueue(id string) (*models.Queue, error) {
+// GetQueue gets the Queue from the queues map corresponding to the provided queue ID.
+func (fr *FirebaseRepository) GetQueue(ID string) (*models.Queue, error) {
 	fr.queuesLock.RLock()
 	defer fr.queuesLock.RUnlock()
 
-	if val, ok := fr.queues[id]; ok {
+	if val, ok := fr.queues[ID]; ok {
 		return val, nil
 	} else {
-		return nil, fmt.Errorf("No profile found for ID %v\n", id)
+		return nil, fmt.Errorf("No profile found for ID %v\n", ID)
 	}
 }
 

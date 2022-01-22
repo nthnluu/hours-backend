@@ -15,14 +15,14 @@ const (
 // This struct separates client-safe profile information from internal user metadata.
 type Profile struct {
 	DisplayName string `json:"displayName" mapstructure:"displayName" firebase:"displayName"`
-	Email       string `json:"email" mapstructure:"email" firebase:"displayName"`
+	Email       string `json:"email" mapstructure:"email" firebase:"email"`
 	PhoneNumber string `json:"phoneNumber,omitempty" mapstructure:"phoneNumber" firebase:"displayName"`
-	PhotoURL    string `json:"photoUrl,omitempty" mapstructure:"photoUrl" firebase:"displayName"`
-	IsAdmin     bool   `json:"isAdmin,omitempty" mapstructure:"isAdmin" firebase:"displayName"`
-	Pronouns    string `json:"pronouns,omitempty" mapstructure:"pronouns" firebase:"displayName"`
-	MeetingLink string `json:"meetingLink,omitempty" mapstructure:"meetingLink" firebase:"displayName"`
+	PhotoURL    string `json:"photoUrl,omitempty" mapstructure:"photoUrl" firebase:"photoUrl"`
+	IsAdmin     bool   `json:"isAdmin,omitempty" mapstructure:"isAdmin" firebase:"isAdmin"`
+	Pronouns    string `json:"pronouns,omitempty" mapstructure:"pronouns" firebase:"pronouns"`
+	MeetingLink string `json:"meetingLink,omitempty" mapstructure:"meetingLink" firebase:"meetingLink"`
 	// Map from course ID to CoursePermission
-	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions" firebase:"displayName"`
+	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions" firebase:"coursePermissions"`
 }
 
 // User represents a registered user.

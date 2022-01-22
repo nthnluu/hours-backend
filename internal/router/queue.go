@@ -149,7 +149,8 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.QueueID = r.Context().Value("queueID").(string)
+
+	req.QueueID = chi.URLParam(r, "queueID")
 	req.CreatedBy = user
 
 	ticket, err := repo.Repository.CreateTicket(&req)
@@ -170,7 +171,7 @@ func editTicketHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	req.QueueID = r.Context().Value("queueID").(string)
+	req.QueueID = chi.URLParam(r, "queueID")
 
 	err = repo.Repository.EditTicket(req)
 	if err != nil {

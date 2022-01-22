@@ -16,15 +16,20 @@ func (fr *FirebaseRepository) initializeCoursesListener() {
 		fr.coursesLock.Lock()
 		defer fr.coursesLock.Unlock()
 
-		var c models.Course
-		err := mapstructure.Decode(doc.Data(), &c)
-		if err != nil {
-			log.Panicf("Error destructuring document: %v", err)
-			return err
-		}
+		if doc.Exists() {
+			var c models.Course
+			err := mapstructure.Decode(doc.Data(), &c)
+			if err != nil {
+				log.Panicf("Error destructuring document: %v", err)
+				return err
+			}
 
-		c.ID = doc.Ref.ID
-		fr.courses[doc.Ref.ID] = &c
+			c.ID = doc.Ref.ID
+			fr.courses[doc.Ref.ID] = &c
+		} else {
+			// doc doesn't exist, might have been deleted. delete from mapping.
+			delete(fr.courses, doc.Ref.ID)
+		}
 
 		return nil
 	}

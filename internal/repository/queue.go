@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -83,12 +84,7 @@ func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
 }
 
 func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
-	q, err := fr.GetCourseByID(c.CourseID)
-	if err != nil {
-		return err
-	}
-
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(q.ID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
 		{Path: "isCutOff", Value: c.IsCutOff},
 	})
 	return err
@@ -217,7 +213,7 @@ func (fr *FirebaseRepository) GetQueue(ID string) (*models.Queue, error) {
 	if val, ok := fr.queues[ID]; ok {
 		return val, nil
 	} else {
-		return nil, fmt.Errorf("No profile found for ID %v\n", ID)
+		return nil, errors.New("queue not found")
 	}
 }
 

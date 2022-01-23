@@ -111,9 +111,15 @@ func cutoffQueueHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.QueueID = chi.URLParam(r, "queueID")
 	err = repo.Repository.CutoffQueue(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err.Error() == "queue not found" {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
 		return
 	}
 

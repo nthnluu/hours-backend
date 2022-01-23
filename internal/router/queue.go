@@ -60,18 +60,10 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, queue)
 }
 
-// POST: /shuffle
+// PATCH: /shuffle
 func shuffleQueueHandler(w http.ResponseWriter, r *http.Request) {
-	var req *models.ShuffleQueueRequest
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	req.QueueID = r.Context().Value("queueID").(string)
-
-	err = repo.Repository.ShuffleQueue(req)
+	req := &models.ShuffleQueueRequest{QueueID: r.Context().Value("queueID").(string)}
+	err := repo.Repository.ShuffleQueue(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

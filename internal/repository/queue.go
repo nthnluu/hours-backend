@@ -21,14 +21,16 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 	}
 
 	queue = &models.Queue{
-		Title:         c.Title,
-		Description:   c.Description,
-		Location:      c.Location,
-		EndTime:       c.EndTime,
-		CourseID:      queueCourse.ID,
-		Course:        queueCourse,
-		IsCutOff:      false,
-		Announcements: make([]*models.Announcement, 0),
+		Title:              c.Title,
+		Description:        c.Description,
+		Location:           c.Location,
+		EndTime:            c.EndTime,
+		CourseID:           queueCourse.ID,
+		AllowTicketEditing: c.AllowTicketEditing,
+		ShowMeetingLinks:   c.ShowMeetingLinks,
+		Course:             queueCourse,
+		IsCutOff:           false,
+		Announcements:      make([]*models.Announcement, 0),
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
@@ -42,9 +44,11 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"title": queue.Course.Title,
 			"code":  queue.Course.Code,
 		},
-		"tickets":       []string{},
-		"isCutOff":      queue.IsCutOff,
-		"announcements": queue.Announcements,
+		"tickets":            []string{},
+		"isCutOff":           queue.IsCutOff,
+		"allowTicketEditing": queue.AllowTicketEditing,
+		"showMeetingLinks":   queue.ShowMeetingLinks,
+		"announcements":      queue.Announcements,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -73,6 +77,12 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 		}, {
 			Path:  "isCutOff",
 			Value: c.IsCutOff,
+		}, {
+			Path:  "showMeetingLinks",
+			Value: c.ShowMeetingLinks,
+		}, {
+			Path:  "allowTicketEditing",
+			Value: c.AllowTicketEditing,
 		},
 	})
 	return err

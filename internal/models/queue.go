@@ -8,16 +8,18 @@ var (
 )
 
 type Queue struct {
-	ID            string          `json:"id" mapstructure:"id"`
-	Title         string          `json:"title" mapstructure:"title"`
-	Description   string          `json:"code" mapstructure:"code"`
-	Location      string          `json:"location" mapstructure:"location"`
-	EndTime       time.Time       `json:"endTime" mapstructure:"endTime"`
-	CourseID      string          `json:"courseID" mapstructure:"courseID"`
-	Course        *Course         `json:"course" mapstructure:"course,omitempty"`
-	IsCutOff      bool            `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
-	Tickets       []string        `json:"tickets" mapstructure:"tickets"`
-	Announcements []*Announcement `json:"announcements" mapstructure:"announcements"`
+	ID                 string          `json:"id" mapstructure:"id"`
+	Title              string          `json:"title" mapstructure:"title"`
+	Description        string          `json:"code" mapstructure:"code"`
+	Location           string          `json:"location" mapstructure:"location"`
+	EndTime            time.Time       `json:"endTime" mapstructure:"endTime"`
+	ShowMeetingLinks   bool            `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
+	AllowTicketEditing bool            `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
+	CourseID           string          `json:"courseID" mapstructure:"courseID"`
+	Course             *Course         `json:"course" mapstructure:"course,omitempty"`
+	IsCutOff           bool            `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
+	Tickets            []string        `json:"tickets" mapstructure:"tickets"`
+	Announcements      []*Announcement `json:"announcements" mapstructure:"announcements"`
 }
 
 type Announcement struct {
@@ -45,21 +47,25 @@ type Ticket struct {
 
 // CreateQueueRequest is the parameter struct to the CreateQueue function.
 type CreateQueueRequest struct {
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Location    string    `json:"location"`
-	EndTime     time.Time `json:"endTime"`
-	CourseID    string    `json:"courseID"`
+	Title              string    `json:"title"`
+	Description        string    `json:"description"`
+	Location           string    `json:"location"`
+	ShowMeetingLinks   bool      `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
+	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
+	EndTime            time.Time `json:"endTime"`
+	CourseID           string    `json:"courseID"`
 }
 
 // EditQueueRequest is the parameter struct to the EditQueue function.
 type EditQueueRequest struct {
-	QueueID     string    `json:"queueID,omitempty"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Location    string    `json:"location"`
-	EndTime     time.Time `json:"endTime"`
-	IsCutOff    bool      `json:"isCutOff"`
+	QueueID            string    `json:"queueID,omitempty"`
+	Title              string    `json:"title"`
+	Description        string    `json:"description"`
+	Location           string    `json:"location"`
+	ShowMeetingLinks   bool      `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
+	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
+	EndTime            time.Time `json:"endTime"`
+	IsCutOff           bool      `json:"isCutOff"`
 }
 
 // AddAnnouncementRequest is the parameter struct to the AddAnnouncement function.

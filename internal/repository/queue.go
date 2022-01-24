@@ -21,13 +21,14 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 	}
 
 	queue = &models.Queue{
-		Title:       c.Title,
-		Description: c.Description,
-		Location:    c.Location,
-		EndTime:     c.EndTime,
-		CourseID:    queueCourse.ID,
-		Course:      queueCourse,
-		IsCutOff:    false,
+		Title:         c.Title,
+		Description:   c.Description,
+		Location:      c.Location,
+		EndTime:       c.EndTime,
+		CourseID:      queueCourse.ID,
+		Course:        queueCourse,
+		IsCutOff:      false,
+		Announcements: make([]*models.Announcement, 0),
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
@@ -41,8 +42,9 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"title": queue.Course.Title,
 			"code":  queue.Course.Code,
 		},
-		"tickets":  []string{},
-		"isCutOff": queue.IsCutOff,
+		"tickets":       []string{},
+		"isCutOff":      queue.IsCutOff,
+		"announcements": queue.Announcements,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -73,6 +75,23 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 			Value: c.IsCutOff,
 		},
 	})
+	return err
+}
+
+func (fr *FirebaseRepository) AddAnnouncement(c *models.AddAnnouncementRequest) error {
+	queue, err := fr.GetQueue(c.QueueID)
+	if err != nil {
+		return qerrors.InvalidQueueError
+	}
+
+	if len(c.Announcement.Content) == 0 {
+		return qerrors.InvalidBody
+	}
+
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+		{Path: "announcements", Value: append(queue.Announcements, &c.Announcement)},
+	})
+
 	return err
 }
 

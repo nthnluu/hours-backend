@@ -8,15 +8,20 @@ var (
 )
 
 type Queue struct {
-	ID          string    `json:"id" mapstructure:"id"`
-	Title       string    `json:"title" mapstructure:"title"`
-	Description string    `json:"code" mapstructure:"code"`
-	Location    string    `json:"location" mapstructure:"location"`
-	EndTime     time.Time `json:"endTime" mapstructure:"endTime"`
-	CourseID    string    `json:"courseID" mapstructure:"courseID"`
-	Course      *Course   `json:"course" mapstructure:"course,omitempty"`
-	IsCutOff    bool      `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
-	Tickets     []string  `json:"tickets" mapstructure:"tickets"`
+	ID            string          `json:"id" mapstructure:"id"`
+	Title         string          `json:"title" mapstructure:"title"`
+	Description   string          `json:"code" mapstructure:"code"`
+	Location      string          `json:"location" mapstructure:"location"`
+	EndTime       time.Time       `json:"endTime" mapstructure:"endTime"`
+	CourseID      string          `json:"courseID" mapstructure:"courseID"`
+	Course        *Course         `json:"course" mapstructure:"course,omitempty"`
+	IsCutOff      bool            `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
+	Tickets       []string        `json:"tickets" mapstructure:"tickets"`
+	Announcements []*Announcement `json:"announcements" mapstructure:"announcements"`
+}
+
+type Announcement struct {
+	Content string `json:"content" mapstructure:"content"`
 }
 
 type TicketStatus string
@@ -25,6 +30,7 @@ const (
 	StatusWaiting  TicketStatus = "WAITING"
 	StatusClaimed  TicketStatus = "CLAIMED"
 	StatusMissing  TicketStatus = "MISSING"
+	StatusReturned TicketStatus = "RETURNED"
 	StatusComplete TicketStatus = "COMPLETE"
 )
 
@@ -54,6 +60,12 @@ type EditQueueRequest struct {
 	Location    string    `json:"location"`
 	EndTime     time.Time `json:"endTime"`
 	IsCutOff    bool      `json:"isCutOff"`
+}
+
+// AddAnnouncementRequest is the parameter struct to the AddAnnouncement function.
+type AddAnnouncementRequest struct {
+	QueueID      string       `json:"queueID,omitempty"`
+	Announcement Announcement `json:"announcement"`
 }
 
 // DeleteQueueRequest is the parameter struct to the CreateQueue function.

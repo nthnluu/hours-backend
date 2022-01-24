@@ -3,6 +3,9 @@ package qerrors
 import "errors"
 
 var (
+	// Generic errors
+	InvalidBody = errors.New("invalid body")
+
 	// Course errors
 	CourseNotFoundError = errors.New("course not found")
 

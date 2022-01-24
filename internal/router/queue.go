@@ -105,7 +105,7 @@ func announceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	req.QueueID = r.Context().Value("queueID").(string)
 
-	err = repo.Repository.AddAnnouncement(&req)
+	err = repo.Repository.AddAnnouncementToQueue(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -21,14 +22,13 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 	}
 
 	queue = &models.Queue{
-		Title:         c.Title,
-		Description:   c.Description,
-		Location:      c.Location,
-		EndTime:       c.EndTime,
-		CourseID:      queueCourse.ID,
-		Course:        queueCourse,
-		IsCutOff:      false,
-		Announcements: make([]*models.Announcement, 0),
+		Title:       c.Title,
+		Description: c.Description,
+		Location:    c.Location,
+		EndTime:     c.EndTime,
+		CourseID:    queueCourse.ID,
+		Course:      queueCourse,
+		IsCutOff:    false,
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
@@ -42,9 +42,8 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"title": queue.Course.Title,
 			"code":  queue.Course.Code,
 		},
-		"tickets":       []string{},
-		"isCutOff":      queue.IsCutOff,
-		"announcements": queue.Announcements,
+		"tickets":  []string{},
+		"isCutOff": queue.IsCutOff,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -78,19 +77,26 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 	return err
 }
 
-func (fr *FirebaseRepository) AddAnnouncement(c *models.AddAnnouncementRequest) error {
+func (fr *FirebaseRepository) AddAnnouncementToQueue(c *models.AddAnnouncementRequest) error {
 	queue, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
 
-	if len(c.Announcement.Content) == 0 {
+	if len(c.Announcement.Body) == 0 {
 		return qerrors.InvalidBody
 	}
 
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
-		{Path: "announcements", Value: append(queue.Announcements, &c.Announcement)},
-	})
+	for _, t := range queue.Tickets {
+		user, err := fr.GetUserFromTicket(t)
+		if err != nil {
+			return err
+		}
+
+		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+			{Path: "notifications", Value: append(user.Notifications, &c.Announcement)},
+		})
+	}
 
 	return err
 }
@@ -174,7 +180,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 	// Validate that this is a valid queue.
-	_, err := fr.GetQueue(c.QueueID)
+	queue, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
@@ -198,6 +204,29 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 
 	// Edit ticket in collection.
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, updates)
+	if err != nil {
+		return err
+	}
+
+	claimedTicket, ok := fr.tickets[c.ID]
+	if !ok {
+		return qerrors.EntityNotFound
+	}
+	claimedUser := claimedTicket.CreatedBy
+
+	n := *&models.Notification{
+		ID:        uuid.NewString(),
+		Type:      models.TicketClaimed,
+		Title:     "Ticket Claimed",
+		Body:      fmt.Sprintf("Your ticket was claimed for %s.", queue.Course.Title),
+		Timestamp: time.Now(),
+	}
+
+	// Edit user
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(claimedUser.ID).Update(firebase.FirebaseContext, []firestore.Update{
+		{Path: "notifications", Value: append(claimedUser.Notifications, &n)},
+	})
+
 	return err
 }
 

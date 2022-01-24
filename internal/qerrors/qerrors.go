@@ -4,7 +4,8 @@ import "errors"
 
 var (
 	// Generic errors
-	InvalidBody = errors.New("invalid body")
+	InvalidBody    = errors.New("invalid body")
+	EntityNotFound = errors.New("entity not found")
 
 	// Course errors
 	CourseNotFoundError = errors.New("course not found")

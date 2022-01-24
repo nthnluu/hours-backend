@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type CoursePermission string
 
 const (
@@ -23,6 +25,22 @@ type Profile struct {
 	MeetingLink string `json:"meetingLink,omitempty" mapstructure:"meetingLink" firebase:"meetingLink"`
 	// Map from course ID to CoursePermission
 	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions" firebase:"coursePermissions"`
+	Notifications     []*Notification             `json:"notifications,omitempty" mapstructure:"notification" firebase:"meetingLink"`
+}
+
+type NotificationType int
+
+const (
+	QueueAnnouncement NotificationType = iota + 1
+	TicketClaimed
+)
+
+type Notification struct {
+	ID        string           `json:"id" mapstructure:"id"`
+	Type      NotificationType `json:"type" mapstructure:"type"`
+	Title     string           `json:"title" mapstructure:"title"`
+	Body      string           `json:"body" mapstructure:"body"`
+	Timestamp time.Time        `json:"timestamp" mapstructure:"timestamp"`
 }
 
 // User represents a registered user.

@@ -109,6 +109,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 			"pronouns":          "",
 			"id":                fbUser.UID,
 			"isAdmin":           profile.IsAdmin,
+			"notifications":     profile.Notifications,
 		})
 
 		if err != nil {

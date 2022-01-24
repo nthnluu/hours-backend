@@ -12,11 +12,13 @@ import (
 )
 
 func (fr *FirebaseRepository) initializeCoursesListener() {
-	handleDoc := func(doc *firestore.DocumentSnapshot) error {
-		fr.coursesLock.Lock()
-		defer fr.coursesLock.Unlock()
+	handleDocs := func(docs []*firestore.DocumentSnapshot) error {
+		newCourses := make(map[string]*models.Course)
+		for _, doc := range docs {
+			if !doc.Exists() {
+				continue
+			}
 
-		if doc.Exists() {
 			var c models.Course
 			err := mapstructure.Decode(doc.Data(), &c)
 			if err != nil {
@@ -25,18 +27,19 @@ func (fr *FirebaseRepository) initializeCoursesListener() {
 			}
 
 			c.ID = doc.Ref.ID
-			fr.courses[doc.Ref.ID] = &c
-		} else {
-			// doc doesn't exist, might have been deleted. delete from mapping.
-			delete(fr.courses, doc.Ref.ID)
+			newCourses[doc.Ref.ID] = &c
 		}
+
+		fr.coursesLock.Lock()
+		defer fr.coursesLock.Unlock()
+		fr.courses = newCourses
 
 		return nil
 	}
 
 	done := make(chan bool)
 	go func() {
-		err := fr.createCollectionInitializer(models.FirestoreCoursesCollection, &done, handleDoc)
+		err := fr.createCollectionInitializer(models.FirestoreCoursesCollection, &done, handleDocs)
 		if err != nil {
 			log.Panicf("error creating course collection listner: %v\n", err)
 		}

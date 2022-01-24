@@ -18,28 +18,33 @@ import (
 )
 
 func (fr *FirebaseRepository) initializeUserProfilesListener() {
-	handleDoc := func(doc *firestore.DocumentSnapshot) error {
-		fr.profilesLock.Lock()
-		defer fr.profilesLock.Unlock()
+	handleDocs := func(docs []*firestore.DocumentSnapshot) error {
+		newProfiles := make(map[string]*models.Profile)
+		for _, doc := range docs {
+			if !doc.Exists() {
+				continue
+			}
 
-		if doc.Exists() {
-			var userProfile models.Profile
-			err := mapstructure.Decode(doc.Data(), &userProfile)
+			var c models.Profile
+			err := mapstructure.Decode(doc.Data(), &c)
 			if err != nil {
+				log.Panicf("Error destructuring document: %v", err)
 				return err
 			}
-			fr.profiles[doc.Ref.ID] = &userProfile
-		} else {
-			// doc doesn't exist, might have been deleted. delete from mapping.
-			delete(fr.profiles, doc.Ref.ID)
+
+			newProfiles[doc.Ref.ID] = &c
 		}
+
+		fr.profilesLock.Lock()
+		defer fr.profilesLock.Unlock()
+		fr.profiles = newProfiles
 
 		return nil
 	}
 
 	done := make(chan bool)
 	go func() {
-		err := fr.createCollectionInitializer(models.FirestoreUserProfilesCollection, &done, handleDoc)
+		err := fr.createCollectionInitializer(models.FirestoreUserProfilesCollection, &done, handleDocs)
 		if err != nil {
 			log.Panicf("error creating user profiles collection listener: %v\n", err)
 		}

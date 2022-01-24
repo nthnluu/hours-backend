@@ -238,36 +238,34 @@ func (fr *FirebaseRepository) GetQueue(ID string) (*models.Queue, error) {
 
 // initializeQueuesListener starts a snapshot listener
 func (fr *FirebaseRepository) initializeQueuesListener() {
-	handleDoc := func(doc *firestore.DocumentSnapshot) error {
+	handleDocs := func(docs []*firestore.DocumentSnapshot) error {
+		newQueues := make(map[string]*models.Queue)
+		for _, doc := range docs {
+			if !doc.Exists() {
+				continue
+			}
+
+			var c models.Queue
+			err := mapstructure.Decode(doc.Data(), &c)
+			if err != nil {
+				log.Panicf("Error destructuring document: %v", err)
+				return err
+			}
+
+			c.ID = doc.Ref.ID
+			newQueues[doc.Ref.ID] = &c
+		}
+
 		fr.queuesLock.Lock()
 		defer fr.queuesLock.Unlock()
-
-		if doc.Exists() {
-			var q models.Queue
-			err := mapstructure.Decode(doc.Data(), &q)
-			if err != nil {
-				return err
-			}
-
-			c, err := fr.GetCourseByID(q.CourseID)
-			if err != nil {
-				fmt.Println(q.CourseID)
-				return err
-			}
-
-			q.Course = c
-			fr.queues[doc.Ref.ID] = &q
-		} else {
-			// doc doesn't exist, might have been deleted. delete from mapping.
-			delete(fr.queues, doc.Ref.ID)
-		}
+		fr.queues = newQueues
 
 		return nil
 	}
 
 	done := make(chan bool)
 	go func() {
-		err := fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDoc)
+		err := fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDocs)
 		if err != nil {
 			log.Panicf("%v collection listener error: %v\n", models.FirestoreQueuesCollection, err)
 		}

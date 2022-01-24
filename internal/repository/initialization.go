@@ -14,7 +14,7 @@ import (
 // createCollectionInitializer creates a snapshot iterator over the given collection, and when the
 // collection changes, runs a function.
 func (fr *FirebaseRepository) createCollectionInitializer(
-	collection string, done *chan bool, handleDoc func(doc *firestore.DocumentSnapshot) error) error {
+	collection string, done *chan bool, handleDocs func(docs []*firestore.DocumentSnapshot) error) error {
 
 	it := fr.firestoreClient.Collection(collection).Snapshots(firebase.FirebaseContext)
 	var doOnce sync.Once
@@ -34,15 +34,12 @@ func (fr *FirebaseRepository) createCollectionInitializer(
 			continue
 		}
 
+		var docs []*firestore.DocumentSnapshot
 		for {
 			doc, err := snap.Documents.Next()
 
 			// iterator.Done is returned when there are no more items to return
 			if err == iterator.Done {
-				doOnce.Do(func() {
-					*done <- true
-				})
-
 				break
 			}
 
@@ -50,7 +47,12 @@ func (fr *FirebaseRepository) createCollectionInitializer(
 				return fmt.Errorf("Documents.Next: %v", err)
 			}
 
-			handleDoc(doc)
+			docs = append(docs, doc)
 		}
+
+		handleDocs(docs)
+		doOnce.Do(func() {
+			*done <- true
+		})
 	}
 }

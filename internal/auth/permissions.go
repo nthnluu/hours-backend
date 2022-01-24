@@ -16,7 +16,7 @@ func RequireStaffForCourse() func(handler http.Handler) http.Handler {
 			}
 
 			courseID := r.Context().Value("courseID").(string)
-			if !isStaffForCourse(user, courseID) {
+			if !hasCourseStaffPermission(user, courseID) {
 				rejectForbiddenRequest(w)
 				return
 			}
@@ -36,7 +36,7 @@ func RequireCourseAdmin() func(handler http.Handler) http.Handler {
 			}
 
 			courseID := r.Context().Value("courseID").(string)
-			if !isAdminForCourse(user, courseID) && !user.IsAdmin {
+			if !hasCourseAdminPermission(user, courseID) {
 				rejectForbiddenRequest(w)
 				return
 			}
@@ -62,7 +62,7 @@ func RequireQueueStaff() func(handler http.Handler) http.Handler {
 				return
 			}
 
-			if !isStaffForCourse(user, q.CourseID) {
+			if !hasCourseStaffPermission(user, q.CourseID) {
 				rejectForbiddenRequest(w)
 				return
 			}
@@ -72,7 +72,11 @@ func RequireQueueStaff() func(handler http.Handler) http.Handler {
 	}
 }
 
-func isStaffForCourse(u *models.User, courseID string) bool {
+func hasCourseStaffPermission(u *models.User, courseID string) bool {
+	if u.IsAdmin {
+		return true
+	}
+
 	if _, ok := u.CoursePermissions[courseID]; !ok {
 		return false
 	}
@@ -80,13 +84,15 @@ func isStaffForCourse(u *models.User, courseID string) bool {
 	return true
 }
 
-func isAdminForCourse(u *models.User, courseID string) bool {
+func hasCourseAdminPermission(u *models.User, courseID string) bool {
+	if u.IsAdmin {
+		return true
+	}
+
 	var ok bool
 	var p models.CoursePermission
-
 	if p, ok = u.CoursePermissions[courseID]; !ok {
 		return false
 	}
-
 	return p == models.CourseAdmin
 }

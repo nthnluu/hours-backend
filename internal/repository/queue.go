@@ -156,6 +156,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		CreatedAt:   time.Now(),
 		Status:      models.StatusWaiting,
 		Description: c.Description,
+		Anonymize: c.Anonymize,
 	}
 
 	// Add ticket to the queue's ticket collection
@@ -164,6 +165,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		"createdAt":   ticket.CreatedAt,
 		"status":      ticket.Status,
 		"description": ticket.Description,
+		"anonymize": ticket.Anonymize,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating ticket: %v\n", err)

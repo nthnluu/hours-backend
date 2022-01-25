@@ -41,10 +41,11 @@ type Ticket struct {
 	UserID   	string           `json:"userID" mapstructure:"userID"`
 	Queue       *Queue           `json:"queue" mapstructure:"queue"`
 	CreatedAt   time.Time        `json:"createdAt" mapstructure:"createdAt"`
-	ClaimedAt   	time.Time    `json:"claimedAt,omitempty" mapstructure:"claimedAt"`
-	ClaimedBy   	string       `json:"claimedBy,omitempty" mapstructure:"claimedBy"`
+	ClaimedAt   time.Time    	 `json:"claimedAt,omitempty" mapstructure:"claimedAt"`
+	ClaimedBy   string       	 `json:"claimedBy,omitempty" mapstructure:"claimedBy"`
 	Status      TicketStatus     `json:"status" mapstructure:"status"`
 	Description string           `json:"description"`
+	Anonymize 	bool   			 `json:"anonymize"`
 }
 
 // CreateQueueRequest is the parameter struct to the CreateQueue function.
@@ -96,6 +97,7 @@ type CreateTicketRequest struct {
 	QueueID     string `json:"queueID,omitempty"`
 	CreatedBy   *User  `json:"createdBy,omitempty"`
 	Description string `json:"description"`
+	Anonymize 	bool   `json:"anonymize"`
 }
 
 // EditTicketRequest is the parameter struct to the EditTicket function.

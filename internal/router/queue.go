@@ -30,7 +30,7 @@ func QueueRoutes() *chi.Mux {
 		router.With(auth.RequireQueueStaff()).Post("/announce", announceHandler)
 		router.With(auth.RequireQueueStaff()).Patch("/cutoff", cutoffQueueHandler)
 		router.With(auth.RequireQueueStaff()).Patch("/shuffle", shuffleQueueHandler)
-		router.With(auth.RequireQueueStaff()).Delete("/", deleteQueueHandler)
+		router.With(auth.RequireQueueStaff(), auth.RequireAdmin()).Delete("/", deleteQueueHandler)
 
 		// Ticket modification
 		router.Post("/ticket", createTicketHandler)

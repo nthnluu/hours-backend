@@ -12,6 +12,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
+	"google.golang.org/api/iterator"
 )
 
 func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *models.Queue, err error) {
@@ -157,6 +158,25 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		Status:      models.StatusWaiting,
 		Description: c.Description,
 		Anonymize: c.Anonymize,
+	}
+
+	// Check that this user is not already in the queue.
+	iter := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Documents(firebase.FirebaseContext)
+	for {
+		// Get next document
+        doc, err := iter.Next()
+        if err == iterator.Done {
+                break
+        }
+        if err != nil {
+                return nil, err
+        }
+		// Check if matches user.
+		var ticket models.Ticket
+		err = mapstructure.Decode(doc.Data(), &ticket)
+		if ticket.UserID == c.CreatedBy.ID && ticket.Status != models.StatusComplete {
+			return nil, fmt.Errorf("error creating ticket: user already active in queue\n")
+		}
 	}
 
 	// Add ticket to the queue's ticket collection

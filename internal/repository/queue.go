@@ -204,6 +204,10 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 			Path:  "claimedAt",
 			Value: time.Now(),
 		})
+		updates = append(updates, firestore.Update{
+			Path:  "claimedBy",
+			Value: c.ClaimedBy.ID,
+		})
 	}
 
 	// Edit ticket in collection.

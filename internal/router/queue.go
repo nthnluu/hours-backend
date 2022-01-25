@@ -169,7 +169,7 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	
 	req.QueueID = chi.URLParam(r, "queueID")
 	req.CreatedBy = user
 
@@ -186,12 +186,19 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 func editTicketHandler(w http.ResponseWriter, r *http.Request) {
 	var req *models.EditTicketRequest
 
-	err := json.NewDecoder(r.Body).Decode(&req)
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
+	
+	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	
 	req.QueueID = chi.URLParam(r, "queueID")
+	req.ClaimedBy = user
 
 	err = repo.Repository.EditTicket(req)
 	if err != nil {

@@ -119,7 +119,7 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 	})
 
 	if err != nil {
-		return fmt.Errorf("error shuffling queue: %v\n", err)
+		return fmt.Errorf("error shuffling queue: %v", err)
 	}
 
 	return nil
@@ -132,9 +132,17 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		return nil, qerrors.InvalidQueueError
 	}
 
+	userdata := models.TicketUserdata{
+		UserID: c.CreatedBy.ID,
+		Email: c.CreatedBy.Email,
+		PhotoURL: c.CreatedBy.PhotoURL,
+		DisplayName: c.CreatedBy.DisplayName,
+		Pronouns: c.CreatedBy.Pronouns,
+	}
+
 	ticket = &models.Ticket{
 		Queue:       queue,
-		UserID:   c.CreatedBy.ID,
+		User:   	 userdata,
 		CreatedAt:   time.Now(),
 		Status:      models.StatusWaiting,
 		Description: c.Description,
@@ -155,21 +163,25 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		// Check if matches user.
 		var ticket models.Ticket
 		err = mapstructure.Decode(doc.Data(), &ticket)
-		if ticket.UserID == c.CreatedBy.ID && ticket.Status != models.StatusComplete {
-			return nil, fmt.Errorf("error creating ticket: user already active in queue\n")
+        if err != nil {
+                return nil, err
+        }
+
+		if ticket.User.UserID == c.CreatedBy.ID && ticket.Status != models.StatusComplete {
+			return nil, fmt.Errorf("error creating ticket: user already active in queue")
 		}
 	}
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-		"userID":   ticket.UserID,
+		"user":   	   ticket.User,
 		"createdAt":   ticket.CreatedAt,
 		"status":      ticket.Status,
 		"description": ticket.Description,
-		"anonymize": ticket.Anonymize,
+		"anonymize":   ticket.Anonymize,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error creating ticket: %v\n", err)
+		return nil, fmt.Errorf("error creating ticket: %v", err)
 	}
 
 	// Add ticket to the queue's ticket array
@@ -180,7 +192,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error adding ticket to queue: %v\n", err)
+		return nil, fmt.Errorf("error adding ticket to queue: %v", err)
 	}
 	return
 }
@@ -283,7 +295,7 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 			Timestamp: time.Now(),
 			Type: models.NotificationAnnouncement,
 		}
-		fr.AddNotification(ticket.UserID, notification)
+		fr.AddNotification(ticket.User.UserID, notification)
 	}
 	return nil
 }

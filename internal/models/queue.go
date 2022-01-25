@@ -31,9 +31,17 @@ const (
 	StatusComplete TicketStatus = "COMPLETE"
 )
 
+type TicketUserdata struct {
+	UserID         string       	 `json:"userID" mapstructure:"userID"`
+	Email          string       	 `json:"email" mapstructure:"email"`
+	PhotoURL       string       	 `json:"photoURL" mapstructure:"photoURL"`
+	DisplayName    string       	 `json:"displayName" mapstructure:"displayName"`
+	Pronouns       string       	 `json:"pronouns" mapstructure:"pronouns"`
+}
+
 type Ticket struct {
 	ID          string       	 `json:"id" mapstructure:"id"`
-	UserID   	string           `json:"userID" mapstructure:"userID"`
+	User   		TicketUserdata   `json:"userID" mapstructure:"userID"`
 	Queue       *Queue           `json:"queue" mapstructure:"queue"`
 	CreatedAt   time.Time        `json:"createdAt" mapstructure:"createdAt"`
 	ClaimedAt   time.Time    	 `json:"claimedAt,omitempty" mapstructure:"claimedAt"`

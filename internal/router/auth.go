@@ -2,7 +2,6 @@ package router
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"signmeup/internal/auth"
@@ -32,6 +31,7 @@ func AuthRoutes() *chi.Mux {
 
 		// Notification clearing
 		r.Post("/clearNotification", clearNotificationHandler)
+		r.Post("/clearAllNotifications", clearAllNotificationsHandler)
 	})
 
 	// Alter the current session. No auth middlewares required.
@@ -204,14 +204,12 @@ func clearNotificationHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 	}
-	fmt.Printf("%+v", r.Body)
 
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Println("c")
 
 	req.UserID = user.ID
 
@@ -220,7 +218,25 @@ func clearNotificationHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("d")
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully cleared notification"))
+}
+
+// POST: notification clear all
+func clearAllNotificationsHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
+
+	req := models.ClearAllNotificationsRequest{UserID: user.ID}
+
+	err = repo.Repository.ClearAllNotifications(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(200)
 	w.Write([]byte("Successfully cleared notification"))

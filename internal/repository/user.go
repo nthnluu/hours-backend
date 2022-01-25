@@ -246,6 +246,16 @@ func (fr *FirebaseRepository) ClearNotification(c *models.ClearNotificationReque
 	return err
 }
 
+func (fr *FirebaseRepository) ClearAllNotifications(c *models.ClearAllNotificationsRequest) error {
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "notifications",
+			Value: make([]models.Notification, 0),
+		},
+	})
+	return err
+}
+
 // Validate checks a CreateUserRequest struct for errors.
 func validate(u *models.CreateUserRequest) error {
 	if err := validateEmail(u.Email); err != nil {

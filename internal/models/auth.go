@@ -79,3 +79,8 @@ type ClearNotificationRequest struct {
 	UserID       string       `json:",omitempty"`
 	NotificationID string `json:"notificationId" mapstructure:"notificationId"`
 }
+
+// ClearNotificationRequest is the parameter struct for the ClearNotification function.
+type ClearAllNotificationsRequest struct {
+	UserID       string       `json:",omitempty"`
+}

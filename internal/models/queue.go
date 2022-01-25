@@ -19,11 +19,6 @@ type Queue struct {
 	Course             *Course         `json:"course" mapstructure:"course,omitempty"`
 	IsCutOff           bool            `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
 	Tickets            []string        `json:"tickets" mapstructure:"tickets"`
-	Announcements      []*Announcement `json:"announcements" mapstructure:"announcements"`
-}
-
-type Announcement struct {
-	Content string `json:"content" mapstructure:"content"`
 }
 
 type TicketStatus string
@@ -71,12 +66,6 @@ type EditQueueRequest struct {
 	IsCutOff           bool      `json:"isCutOff"`
 }
 
-// AddAnnouncementRequest is the parameter struct to the AddAnnouncement function.
-type AddAnnouncementRequest struct {
-	QueueID      string       `json:"queueID,omitempty"`
-	Announcement Announcement `json:"announcement"`
-}
-
 // DeleteQueueRequest is the parameter struct to the CreateQueue function.
 type DeleteQueueRequest struct {
 	QueueID string `json:"queueID,omitempty"`
@@ -114,4 +103,11 @@ type EditTicketRequest struct {
 type DeleteTicketRequest struct {
 	ID      string `json:"id" mapstructure:"id"`
 	QueueID string `json:"queueID,omitempty"`
+}
+
+
+// MakeAnnouncementRequest is the parameter struct to the MakeAnnouncement function.
+type MakeAnnouncementRequest struct {
+	QueueID 	 string `json:"queueID,omitempty"`
+	Announcement string	`json:"announcement" mapstructure:"announcement"`
 }

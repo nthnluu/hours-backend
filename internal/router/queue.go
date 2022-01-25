@@ -27,7 +27,6 @@ func QueueRoutes() *chi.Mux {
 
 		// Queue modification
 		router.With(auth.RequireQueueStaff()).Post("/edit", editQueueHandler)
-		router.With(auth.RequireQueueStaff()).Post("/announce", announceHandler)
 		router.With(auth.RequireQueueStaff()).Patch("/cutoff", cutoffQueueHandler)
 		router.With(auth.RequireQueueStaff()).Patch("/shuffle", shuffleQueueHandler)
 		router.With(auth.RequireQueueStaff(), auth.RequireAdmin()).Delete("/", deleteQueueHandler)
@@ -36,6 +35,9 @@ func QueueRoutes() *chi.Mux {
 		router.Post("/ticket", createTicketHandler)
 		router.Patch("/ticket", editTicketHandler)
 		router.Post("/ticket/delete", deleteTicketHandler)
+
+		// Announcement
+		router.With(auth.RequireQueueStaff()).Post("/announce", announceHandler)
 	})
 
 	return router
@@ -92,27 +94,6 @@ func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte("Successfully edited queue " + req.QueueID))
-}
-
-// POST: /{queueID}/announce
-func announceHandler(w http.ResponseWriter, r *http.Request) {
-	var req models.AddAnnouncementRequest
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	req.QueueID = r.Context().Value("queueID").(string)
-
-	err = repo.Repository.AddAnnouncement(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write([]byte("Successfully added announcement to queue " + req.QueueID))
 }
 
 // POST: /cutoff/{queueID}
@@ -231,4 +212,25 @@ func deleteTicketHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte("Successfully edited ticket " + req.ID))
+}
+
+// POST: /{queueID}/announce
+func announceHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.MakeAnnouncementRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	req.QueueID = r.Context().Value("queueID").(string)
+
+	err = repo.Repository.MakeAnnouncement(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully added announcement to queue " + req.QueueID))
 }

@@ -31,7 +31,6 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		ShowMeetingLinks:   c.ShowMeetingLinks,
 		Course:             queueCourse,
 		IsCutOff:           false,
-		Announcements:      make([]*models.Announcement, 0),
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
@@ -49,7 +48,6 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		"isCutOff":           queue.IsCutOff,
 		"allowTicketEditing": queue.AllowTicketEditing,
 		"showMeetingLinks":   queue.ShowMeetingLinks,
-		"announcements":      queue.Announcements,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -86,23 +84,6 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 			Value: c.AllowTicketEditing,
 		},
 	})
-	return err
-}
-
-func (fr *FirebaseRepository) AddAnnouncement(c *models.AddAnnouncementRequest) error {
-	queue, err := fr.GetQueue(c.QueueID)
-	if err != nil {
-		return qerrors.InvalidQueueError
-	}
-
-	if len(c.Announcement.Content) == 0 {
-		return qerrors.InvalidBody
-	}
-
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
-		{Path: "announcements", Value: append(queue.Announcements, &c.Announcement)},
-	})
-
 	return err
 }
 
@@ -265,6 +246,46 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 		},
 	})
 	return err
+}
+
+func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest) error {
+	// Get queue.
+	queue, err := fr.GetQueue(c.QueueID)
+	if err != nil {
+		return qerrors.InvalidQueueError
+	}
+
+	// Reject empty announcements.
+	if len(c.Announcement) == 0 {
+		return qerrors.InvalidBody
+	}
+
+	for _, ticketID := range queue.Tickets {
+		// Get ticket from collection.
+		doc, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(ticketID).Get(firebase.FirebaseContext)
+		if err != nil {
+			return err
+		}
+		// Deserialize.
+		var ticket models.Ticket
+		err = mapstructure.Decode(doc.Data(), &ticket)
+		if err != nil {
+			return err
+		}
+		// If ticket is completed, ignore.
+		if ticket.Status == models.StatusComplete {
+			continue
+		}
+		// Add an announcement to the owner of the ticket.
+		notification := models.Notification{
+			Title: c.Announcement,
+			Body: queue.Course.Code,
+			Timestamp: time.Now(),
+			Type: models.NotificationAnnouncement,
+		}
+		fr.AddNotification(ticket.UserID, notification)
+	}
+	return nil
 }
 
 // GetQueue gets the Queue from the queues map corresponding to the provided queue ID.

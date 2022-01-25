@@ -152,7 +152,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 	ticket = &models.Ticket{
 		Queue:       queue,
-		CreatedBy:   c.CreatedBy,
+		UserID:   c.CreatedBy.ID,
 		CreatedAt:   time.Now(),
 		Status:      models.StatusWaiting,
 		Description: c.Description,
@@ -160,7 +160,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-		"createdBy":   ticket.CreatedBy.Profile,
+		"userID":   ticket.UserID,
 		"createdAt":   ticket.CreatedAt,
 		"status":      ticket.Status,
 		"description": ticket.Description,

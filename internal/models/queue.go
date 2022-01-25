@@ -39,7 +39,7 @@ const (
 type Ticket struct {
 	ID          string       `json:"id" mapstructure:"id"`
 	Queue       *Queue       `json:"queue" mapstructure:"queue"`
-	CreatedBy   *User        `json:"createdBy" mapstructure:"createdBy"`
+	UserID   	string        `json:"createdBy" mapstructure:"createdBy"`
 	CreatedAt   time.Time    `json:"createdAt" mapstructure:"createdAt"`
 	Status      TicketStatus `json:"status" mapstructure:"status"`
 	Description string       `json:"description"`

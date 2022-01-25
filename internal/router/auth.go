@@ -23,15 +23,15 @@ func AuthRoutes() *chi.Mux {
 		r.Use(auth.AuthCtx())
 
 		// Information about the current user
-		router.With(auth.AuthCtx()).Get("/me", getMeHandler)
-		router.With(auth.AuthCtx()).Get("/{userID}", getUserHandler)
+		r.Get("/me", getMeHandler)
+		r.Get("/{userID}", getUserHandler)
 
 		// Update the current user's information
-		router.With(auth.AuthCtx()).Post("/update", updateUserHandler)
-		router.With(auth.RequireAdmin()).Post("/updateByEmail", updateUserByEmailHandler)
+		r.Post("/update", updateUserHandler)
+		r.With(auth.RequireAdmin()).Post("/updateByEmail", updateUserByEmailHandler)
 
 		// Notification clearing
-		router.With(auth.AuthCtx()).Post("/clearNotification", clearNotificationHandler)
+		r.Post("/clearNotification", clearNotificationHandler)
 	})
 
 	// Alter the current session. No auth middlewares required.

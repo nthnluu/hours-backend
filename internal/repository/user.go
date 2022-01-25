@@ -13,6 +13,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/api/iterator"
+	"github.com/google/uuid"
 
 	firebaseAuth "firebase.google.com/go/auth"
 )
@@ -212,21 +213,34 @@ func (fr *FirebaseRepository) List() ([]*models.User, error) {
 }
 
 // Operations
-func (fr *FirebaseRepository) ClearNotification(c *models.ClearNotificationRequest) error {
-	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
-		{
-			Path:  "notifications",
-			Value: firestore.ArrayRemove(c.Notification),
-		},
-	})
-	return err
-}
-
 func (fr *FirebaseRepository) AddNotification(userID string, notification models.Notification) error {
+	notification.ID = uuid.New().String()
 	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(userID).Update(firebase.FirebaseContext, []firestore.Update{
 		{
 			Path:  "notifications",
 			Value: firestore.ArrayUnion(notification),
+		},
+	})
+	
+	return err
+}
+
+func (fr *FirebaseRepository) ClearNotification(c *models.ClearNotificationRequest) error {
+	user, err := fr.GetUserByID(c.UserID)
+	if err != nil {
+		return err
+	}
+	
+	newNotifications := make([]models.Notification, 0)
+	for _, v := range user.Notifications {
+		if v.ID != c.NotificationID {
+			newNotifications = append(newNotifications, v)
+		}
+	}
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "notifications",
+			Value: newNotifications,
 		},
 	})
 	return err

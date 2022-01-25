@@ -77,5 +77,5 @@ type MakeAdminByEmailRequest struct {
 // ClearNotificationRequest is the parameter struct for the ClearNotification function.
 type ClearNotificationRequest struct {
 	UserID       string       `json:",omitempty"`
-	Notification Notification `json:"notification" mapstructure:"notification"`
+	NotificationID string `json:"notificationId" mapstructure:"notificationId"`
 }

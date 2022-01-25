@@ -28,6 +28,9 @@ func AuthRoutes() *chi.Mux {
 		// Update the current user's information
 		router.With(auth.AuthCtx()).Post("/update", updateUserHandler)
 		router.With(auth.RequireAdmin()).Post("/updateByEmail", updateUserByEmailHandler)
+
+		// Notification clearing
+		router.With(auth.AuthCtx()).Post("/clearNotification", clearNotificationHandler)
 	})
 
 	// Alter the current session. No auth middlewares required.
@@ -190,4 +193,31 @@ func signOutHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("success"))
 	return
+}
+
+// POST: notification clear
+func clearNotificationHandler(w http.ResponseWriter, r *http.Request) {
+	var req *models.ClearNotificationRequest
+
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	req.UserID = user.ID
+
+	err = repo.Repository.ClearNotification(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully cleared notification"))
 }

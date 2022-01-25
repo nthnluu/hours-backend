@@ -1,14 +1,23 @@
 package models
 
+import "time"
+
+const (
+	FirestoreUserProfilesCollection = "user_profiles"
+)
+
 type CoursePermission string
 
 const (
 	CourseAdmin CoursePermission = "ADMIN"
-	CourseStaff                  = "STAFF"
+	CourseStaff CoursePermission = "STAFF"
 )
 
+type NotificationType string
+
 const (
-	FirestoreUserProfilesCollection = "user_profiles"
+	NotificationClaimed NotificationType = "CLAIMED"
+	NotificationAnnouncement NotificationType = "ANNOUNCEMENT"
 )
 
 // Profile is a collection of standard profile information for a user.
@@ -23,6 +32,7 @@ type Profile struct {
 	MeetingLink string `json:"meetingLink,omitempty" mapstructure:"meetingLink" firebase:"meetingLink"`
 	// Map from course ID to CoursePermission
 	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions" firebase:"coursePermissions"`
+	Notifications []Notification `json:"notifications" mapstructure:"notifications" firebase:"notifications"`
 }
 
 // User represents a registered user.
@@ -32,6 +42,14 @@ type User struct {
 	Disabled           bool
 	CreationTimestamp  int64
 	LastLogInTimestamp int64
+}
+
+type Notification struct {
+	ID         string    		   `json:"id" mapstructure:"id"`
+	Title      string    		   `json:"title" mapstructure:"title"`
+	Body       string    		   `json:"body" mapstructure:"body"`
+	Timestamp  time.Time 		   `json:"timestamp" mapstructure:"timestamp"`
+	Type       NotificationType    `json:"type" mapstructure:"type"`
 }
 
 // CreateUserRequest is the parameter struct for the CreateUser function.
@@ -54,4 +72,10 @@ type UpdateUserRequest struct {
 type MakeAdminByEmailRequest struct {
 	Email   string `json:"email"`
 	IsAdmin bool   `json:"isAdmin"`
+}
+
+// ClearNotificationRequest is the parameter struct for the ClearNotification function.
+type ClearNotificationRequest struct {
+	UserID       string       `json:",omitempty"`
+	Notification Notification `json:"notification" mapstructure:"notification"`
 }

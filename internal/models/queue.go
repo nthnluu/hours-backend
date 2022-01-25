@@ -104,6 +104,7 @@ type CreateTicketRequest struct {
 type EditTicketRequest struct {
 	ID          string       `json:"id" mapstructure:"id"`
 	QueueID     string       `json:"queueID,omitempty"`
+	OwnerID		string		 `json:"ownerID" mapstructure:"ownerID"`
 	Status      TicketStatus `json:"status" mapstructure:"status"`
 	Description string       `json:"description"`
 	ClaimedBy   *User		 `json:"claimedBy,omitempty"`

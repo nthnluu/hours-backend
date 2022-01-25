@@ -206,7 +206,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 	// Validate that this is a valid queue.
-	_, err := fr.GetQueue(c.QueueID)
+	queue, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
@@ -230,6 +230,13 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 			Path:  "claimedBy",
 			Value: c.ClaimedBy.ID,
 		})
+		notif := models.Notification{
+			Title: "You've been claimed!",
+			Body: queue.Course.Code,
+			Timestamp: time.Now(),
+			Type: models.NotificationClaimed,
+		}
+		fr.AddNotification(c.OwnerID, notif)
 	}
 
 	// Edit ticket in collection.

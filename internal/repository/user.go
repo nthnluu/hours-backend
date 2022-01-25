@@ -212,6 +212,25 @@ func (fr *FirebaseRepository) List() ([]*models.User, error) {
 }
 
 // Operations
+func (fr *FirebaseRepository) ClearNotification(c *models.ClearNotificationRequest) error {
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "notifications",
+			Value: firestore.ArrayRemove(c.Notification),
+		},
+	})
+	return err
+}
+
+func (fr *FirebaseRepository) AddNotification(userID string, notification models.Notification) error {
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(userID).Update(firebase.FirebaseContext, []firestore.Update{
+		{
+			Path:  "notifications",
+			Value: firestore.ArrayUnion(notification),
+		},
+	})
+	return err
+}
 
 // Validate checks a CreateUserRequest struct for errors.
 func validate(u *models.CreateUserRequest) error {

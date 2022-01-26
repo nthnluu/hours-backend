@@ -1,2 +1,11 @@
 # Secrets
 firebase-config.json
+
+# Data
+data/
+
+# Package
+node_modules/
+
+# Build files
+dist/

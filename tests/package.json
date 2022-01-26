@@ -1,0 +1,18 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "description": "A suite of Javascript-based tests to assess the quality of our backend.",
+  "main": "load_test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Neil Ramaswamy",
+  "license": "ISC",
+  "dependencies": {
+    "@types/k6": "^0.36.0",
+    "axios": "^0.25.0",
+    "firebase": "^9.6.4",
+    "firebase-admin": "^10.0.2",
+    "k6": "^0.0.0"
+  }
+}

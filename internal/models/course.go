@@ -52,3 +52,9 @@ type RemoveCoursePermissionRequest struct {
 	CourseID string `json:"courseID"`
 	UserID   string `json:"userID"`
 }
+
+type BulkUploadRequest struct {
+	Term   string `json:"term" mapstructure:"term"`
+	Data   string `json:"data" mapstructure:"data"`
+	CreatedBy *User  `json:"omitempty"`
+}

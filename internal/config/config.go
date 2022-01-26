@@ -48,5 +48,5 @@ func DefaultProductionConfig() *ServerConfig {
 
 func init() {
 	log.Println("🙂️ No configuration provided. Using the default configuration.")
-	Config = DefaultProductionConfig()
+	Config = DefaultDevelopmentConfig()
 }

@@ -6,6 +6,7 @@ import (
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
@@ -57,6 +58,18 @@ func (fr *FirebaseRepository) GetCourseByID(ID string) (*models.Course, error) {
 	} else {
 		return nil, qerrors.CourseNotFoundError
 	}
+}
+
+func (fr *FirebaseRepository) GetCourseByInfo(code string, term string) (*models.Course, error) {
+	fr.coursesLock.RLock()
+	defer fr.coursesLock.RUnlock()
+
+	for _, course := range fr.courses {
+		if course.Code == code && course.Term == term {
+			return course, nil
+		}
+	}
+	return nil, qerrors.CourseNotFoundError
 }
 
 func (fr *FirebaseRepository) CreateCourse(c *models.CreateCourseRequest) (course *models.Course, err error) {
@@ -166,4 +179,57 @@ func (fr *FirebaseRepository) RemovePermission(c *models.RemoveCoursePermissionR
 		},
 	})
 	return err
+}
+
+func (fr *FirebaseRepository) BulkUpload(c *models.BulkUploadRequest) error {
+	// SCHEMA: (email, [UTA/HTA], course_code, course_name)
+
+	// Extract data.
+	data := make([][]string, 0)
+	for _, row := range strings.Split(c.Data, "\n") {
+		// Split cols, trim fields, lowercase all but course name.
+		cols := strings.Split(row, ",")
+		for i := range cols {
+			cols[i] = strings.TrimSpace(cols[i])
+			if i != 3 {
+				cols[i] = strings.ToLower(cols[i])
+			}
+		}
+		// Map permissions.
+		if cols[1] == "hta" {
+			cols[1] = string(models.CourseAdmin)
+		} else {
+			cols[1] = string(models.CourseStaff)
+		} 
+		data = append(data, cols)
+	}
+
+	// Create courses.
+	courses := make(map[string]string)
+	for _, row := range data {
+		courseCode := row[2]
+		courseName := row[3]
+		courses[courseCode] = courseName
+	}
+	for code, name := range courses {
+		fr.CreateCourse(&models.CreateCourseRequest{
+			Title: name,
+			Code: code,
+			Term: c.Term,
+		})
+	}
+
+	// Create invites.
+	for _, row := range data {
+		course, err := fr.GetCourseByInfo(row[2], c.Term)
+		if err != nil {
+			return err
+		}
+		fr.AddPermission(&models.AddCoursePermissionRequest{
+			CourseID: course.ID,
+			Email: row[0],
+			Permission: row[1],
+		})
+	}
+	return nil
 }

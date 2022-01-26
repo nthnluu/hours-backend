@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"signmeup/internal/auth"
 	"signmeup/internal/middleware"
@@ -35,6 +36,7 @@ func CourseRoutes() *chi.Mux {
 		router.With(auth.RequireCourseAdmin()).Post("/addPermission", addCoursePermissionHandler)
 		router.With(auth.RequireCourseAdmin()).Post("/removePermission", removeCoursePermissionHandler)
 	})
+	router.With(auth.RequireAdmin()).Post("/bulkUpload", bulkUploadHandler)
 
 	return router
 }
@@ -152,4 +154,25 @@ func removeCoursePermissionHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte("Successfully removed course permission from " + req.CourseID))
+}
+
+// POST: /bulkUpload
+func bulkUploadHandler(w http.ResponseWriter, r *http.Request) {
+	var req *models.BulkUploadRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = repo.Repository.BulkUpload(req)
+	fmt.Println(err)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully bulk-uploaded"))
 }

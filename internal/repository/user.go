@@ -110,10 +110,37 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 			"pronouns":          "",
 			"id":                fbUser.UID,
 			"isAdmin":           profile.IsAdmin,
+			"notifications": 	 make([]models.Notification, 0),
 		})
-
 		if err != nil {
 			return nil, fmt.Errorf("error creating user profile: %v\n", err)
+		}
+
+		// Go through each of the invites and execute them.
+		iter := fr.firestoreClient.Collection(models.FirestoreInvitesCollection).Where("email", "==", fbUser.Email).Documents(firebase.FirebaseContext)
+		for {
+			// Get this document.
+			doc, err := iter.Next()
+			if err == iterator.Done {
+					break
+			}
+			if err != nil {
+					return nil, err
+			}
+			// Decode this document.
+			var invite models.CourseInvite
+			err = mapstructure.Decode(doc.Data(), &invite)
+			if err != nil {
+				return nil, err
+			}
+			// Execute the invite.
+			fr.AddPermission(&models.AddCoursePermissionRequest{
+				CourseID: invite.CourseID,
+				Email: invite.Email,
+				Permission: invite.Permission,
+			})
+			// Delete the doc.
+			doc.Ref.Delete(firebase.FirebaseContext)
 		}
 	}
 

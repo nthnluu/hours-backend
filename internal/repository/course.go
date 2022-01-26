@@ -121,6 +121,12 @@ func (fr *FirebaseRepository) AddPermission(c *models.AddCoursePermissionRequest
 	// Get user by email.
 	user, err := fr.GetUserByEmail(c.Email)
 	if err != nil {
+		// The user doesn't exist; add an invite to the invites collection and then return.
+		_, _, err = fr.firestoreClient.Collection(models.FirestoreInvitesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
+			"email": c.Email,
+			"courseID": c.CourseID,
+			"permission": c.Permission,
+		})
 		return err
 	}
 	// Set course-side permissions.

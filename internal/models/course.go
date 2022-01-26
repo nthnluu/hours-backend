@@ -2,6 +2,7 @@ package models
 
 var (
 	FirestoreCoursesCollection = "courses"
+	FirestoreInvitesCollection = "invites"
 )
 
 type Course struct {
@@ -11,6 +12,12 @@ type Course struct {
 	Term              string                      `json:"term" mapstructure:"term"`
 	IsArchived        bool                        `json:"isArchived" mapstructure:"isArchived"`
 	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions"`
+}
+
+type CourseInvite struct {
+	Email      string `json:"email"`
+	CourseID   string `json:"courseID"`
+	Permission string `json:"permission"`
 }
 
 type GetCourseRequest struct {

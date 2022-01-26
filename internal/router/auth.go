@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/json"
+	"github.com/golang/glog"
 	"log"
 	"net/http"
 	"signmeup/internal/auth"
@@ -66,9 +67,13 @@ func getUserHandler(w http.ResponseWriter, r *http.Request) {
 		resp["message"] = "User Not Found"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("json marshal fucked. Err: %s", err)
+			glog.Warningln("failed to marshall json error response")
 		}
-		w.Write(jsonResp)
+		_, err = w.Write(jsonResp)
+		if err != nil {
+			glog.Warningf("failed to write response: %v\n", err)
+			log.Println(err)
+		}
 		return
 	}
 	render.JSON(w, r, user)
@@ -97,7 +102,11 @@ func updateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-	w.Write([]byte("Successfully edited user " + req.UserID))
+	_, err = w.Write([]byte("successfully edited user " + req.UserID))
+	if err != nil {
+		glog.Warningf("failed to write response: %v\n", err)
+		return
+	}
 }
 
 // POST: /updateByEmail
@@ -117,12 +126,15 @@ func updateUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-	w.Write([]byte("Successfully edited user " + req.Email))
+	_, err = w.Write([]byte("Successfully edited user " + req.Email))
+	if err != nil {
+		return
+	}
 }
 
 // POST: /session
 func createSessionHandler(w http.ResponseWriter, r *http.Request) {
-	authClient, err := firebase.FirebaseApp.Auth(firebase.FirebaseContext)
+	authClient, err := firebase.App.Auth(firebase.Context)
 	if err != nil {
 		log.Fatalf("error getting Auth client: %v\n", err)
 	}
@@ -144,7 +156,7 @@ func createSessionHandler(w http.ResponseWriter, r *http.Request) {
 	// The session cookie will have the same claims as the ID token.
 	// To only allow session cookie setting on recent sign-in, auth_time in ID token
 	// can be checked to ensure user was recently signed in before creating a session cookie.
-	cookie, err := authClient.SessionCookie(firebase.FirebaseContext, req.Token, expiresIn)
+	cookie, err := authClient.SessionCookie(firebase.Context, req.Token, expiresIn)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

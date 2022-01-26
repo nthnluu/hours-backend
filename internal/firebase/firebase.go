@@ -8,9 +8,9 @@ import (
 	"google.golang.org/api/option"
 )
 
-// FirebaseApp is a global variable to hold the initialized Firebase App object
-var FirebaseApp *firebaseSDK.App
-var FirebaseContext context.Context
+// App is a global variable to hold the initialized Firebase App object
+var App *firebaseSDK.App
+var Context context.Context
 
 func initializeFirebaseApp() {
 	ctx := context.Background()
@@ -20,8 +20,8 @@ func initializeFirebaseApp() {
 		panic(err.Error())
 	}
 
-	FirebaseApp = app
-	FirebaseContext = ctx
+	App = app
+	Context = ctx
 }
 
 func init() {

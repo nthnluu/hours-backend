@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"github.com/golang/glog"
 	"google.golang.org/api/iterator"
 	"log"
 	"math/rand"
@@ -33,7 +34,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		IsCutOff:           false,
 	}
 
-	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
+	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.Context, map[string]interface{}{
 		"title":       queue.Title,
 		"description": queue.Description,
 		"location":    queue.Location,
@@ -60,7 +61,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 
 func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 	// Update queue.
-	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "title",
 			Value: c.Title,
@@ -89,13 +90,13 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 
 func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
 	// Delete queue.
-	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Delete(firebase.FirebaseContext)
+	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Delete(firebase.Context)
 
 	return err
 }
 
 func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
-	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{Path: "isCutOff", Value: c.IsCutOff},
 	})
 	return err
@@ -111,7 +112,7 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 		q.Tickets[i], q.Tickets[j] = q.Tickets[j], q.Tickets[i]
 	})
 
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "tickets",
 			Value: q.Tickets,
@@ -150,7 +151,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	}
 
 	// Check that this user is not already in the queue.
-	iter := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Documents(firebase.FirebaseContext)
+	iter := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Documents(firebase.Context)
 	for {
 		// Get next document
 		doc, err := iter.Next()
@@ -158,6 +159,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 			break
 		}
 		if err != nil {
+			glog.Warningf("an error occurred while checking for duplicate tickets: %v\n", err)
 			return nil, err
 		}
 		// Check if matches user.
@@ -167,13 +169,13 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 			return nil, err
 		}
 
-		if ticket.User.UserID == c.CreatedBy.ID && ticket.Status != models.StatusComplete {
+		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status != models.StatusComplete) {
 			return nil, fmt.Errorf("error creating ticket: user already active in queue")
 		}
 	}
 
 	// Add ticket to the queue's ticket collection
-	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Add(firebase.FirebaseContext, map[string]interface{}{
+	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Add(firebase.Context, map[string]interface{}{
 		"user":        ticket.User,
 		"createdAt":   ticket.CreatedAt,
 		"status":      ticket.Status,
@@ -185,7 +187,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	}
 
 	// Add ticket to the queue's ticket array
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "tickets",
 			Value: append(queue.Tickets, ref.ID),
@@ -229,11 +231,14 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 			Timestamp: time.Now(),
 			Type:      models.NotificationClaimed,
 		}
-		fr.AddNotification(c.OwnerID, notif)
+		err := fr.AddNotification(c.OwnerID, notif)
+		if err != nil {
+			glog.Warningf("error sending claim notification: %v\n", err)
+		}
 	}
 
 	// Edit ticket in collection.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.FirebaseContext, updates)
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.Context, updates)
 	return err
 }
 
@@ -245,13 +250,13 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 	}
 
 	// Remove ticket from tickets.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.FirebaseContext)
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.Context)
 	if err != nil {
 		return err
 	}
 
 	// Remove ticket from queue.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "tickets",
 			Value: firestore.ArrayRemove(c.ID),
@@ -274,7 +279,7 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 
 	for _, ticketID := range queue.Tickets {
 		// Get ticket from collection.
-		doc, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(ticketID).Get(firebase.FirebaseContext)
+		doc, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(ticketID).Get(firebase.Context)
 		if err != nil {
 			return err
 		}

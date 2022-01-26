@@ -16,7 +16,7 @@ import (
 func (fr *FirebaseRepository) createCollectionInitializer(
 	collection string, done *chan bool, handleDocs func(docs []*firestore.DocumentSnapshot) error) error {
 
-	it := fr.firestoreClient.Collection(collection).Snapshots(firebase.FirebaseContext)
+	it := fr.firestoreClient.Collection(collection).Snapshots(firebase.Context)
 	var doOnce sync.Once
 
 	for {
@@ -50,7 +50,7 @@ func (fr *FirebaseRepository) createCollectionInitializer(
 			docs = append(docs, doc)
 		}
 
-		handleDocs(docs)
+		_ = handleDocs(docs)
 		doOnce.Do(func() {
 			*done <- true
 		})

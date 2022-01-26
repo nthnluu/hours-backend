@@ -51,13 +51,13 @@ func NewFirebaseRepository() (*FirebaseRepository, error) {
 		profiles:     make(map[string]*models.Profile),
 	}
 
-	authClient, err := firebase.FirebaseApp.Auth(firebase.FirebaseContext)
+	authClient, err := firebase.App.Auth(firebase.Context)
 	if err != nil {
 		return nil, fmt.Errorf("Auth client error: %v\n", err)
 	}
 	fr.authClient = authClient
 
-	firestoreClient, err := firebase.FirebaseApp.Firestore(firebase.FirebaseContext)
+	firestoreClient, err := firebase.App.Firestore(firebase.Context)
 	if err != nil {
 		return nil, fmt.Errorf("Firestore client error: %v\n", err)
 	}

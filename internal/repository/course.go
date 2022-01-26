@@ -81,7 +81,7 @@ func (fr *FirebaseRepository) CreateCourse(c *models.CreateCourseRequest) (cours
 		CoursePermissions: map[string]models.CoursePermission{},
 	}
 
-	ref, _, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
+	ref, _, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Add(firebase.Context, map[string]interface{}{
 		"title":             course.Title,
 		"code":              course.Code,
 		"term":              course.Term,
@@ -105,7 +105,7 @@ func (fr *FirebaseRepository) DeleteCourse(c *models.DeleteCourseRequest) error 
 
 	// Delete this course from all users with permissions.
 	for k := range course.CoursePermissions {
-		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(k).Update(firebase.FirebaseContext, []firestore.Update{
+		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(k).Update(firebase.Context, []firestore.Update{
 			{
 				Path:  "coursePermissions." + course.ID,
 				Value: firestore.Delete,
@@ -117,12 +117,12 @@ func (fr *FirebaseRepository) DeleteCourse(c *models.DeleteCourseRequest) error 
 	}
 
 	// Delete the course.
-	_, err = fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Delete(firebase.FirebaseContext)
+	_, err = fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Delete(firebase.Context)
 	return err
 }
 
 func (fr *FirebaseRepository) EditCourse(c *models.EditCourseRequest) error {
-	_, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.Context, []firestore.Update{
 		{Path: "title", Value: c.Title},
 		{Path: "term", Value: c.Term},
 		{Path: "code", Value: c.Code},
@@ -135,15 +135,15 @@ func (fr *FirebaseRepository) AddPermission(c *models.AddCoursePermissionRequest
 	user, err := fr.GetUserByEmail(c.Email)
 	if err != nil {
 		// The user doesn't exist; add an invite to the invites collection and then return.
-		_, _, err = fr.firestoreClient.Collection(models.FirestoreInvitesCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-			"email": c.Email,
-			"courseID": c.CourseID,
+		_, _, err = fr.firestoreClient.Collection(models.FirestoreInvitesCollection).Add(firebase.Context, map[string]interface{}{
+			"email":      c.Email,
+			"courseID":   c.CourseID,
 			"permission": c.Permission,
 		})
 		return err
 	}
 	// Set course-side permissions.
-	_, err = fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "coursePermissions." + user.ID,
 			Value: c.Permission,
@@ -153,7 +153,7 @@ func (fr *FirebaseRepository) AddPermission(c *models.AddCoursePermissionRequest
 		return err
 	}
 	// Set user-side permissions.
-	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "coursePermissions." + c.CourseID,
 			Value: c.Permission,
@@ -163,7 +163,7 @@ func (fr *FirebaseRepository) AddPermission(c *models.AddCoursePermissionRequest
 }
 
 func (fr *FirebaseRepository) RemovePermission(c *models.RemoveCoursePermissionRequest) error {
-	_, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(c.CourseID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "coursePermissions." + c.UserID,
 			Value: firestore.Delete,
@@ -172,7 +172,7 @@ func (fr *FirebaseRepository) RemovePermission(c *models.RemoveCoursePermissionR
 	if err != nil {
 		return err
 	}
-	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "coursePermissions." + c.CourseID,
 			Value: firestore.Delete,
@@ -200,7 +200,7 @@ func (fr *FirebaseRepository) BulkUpload(c *models.BulkUploadRequest) error {
 			cols[1] = string(models.CourseAdmin)
 		} else {
 			cols[1] = string(models.CourseStaff)
-		} 
+		}
 		data = append(data, cols)
 	}
 
@@ -212,10 +212,10 @@ func (fr *FirebaseRepository) BulkUpload(c *models.BulkUploadRequest) error {
 		courses[courseCode] = courseName
 	}
 	for code, name := range courses {
-		fr.CreateCourse(&models.CreateCourseRequest{
+		_, _ = fr.CreateCourse(&models.CreateCourseRequest{
 			Title: name,
-			Code: code,
-			Term: c.Term,
+			Code:  code,
+			Term:  c.Term,
 		})
 	}
 
@@ -225,9 +225,9 @@ func (fr *FirebaseRepository) BulkUpload(c *models.BulkUploadRequest) error {
 		if err != nil {
 			return err
 		}
-		fr.AddPermission(&models.AddCoursePermissionRequest{
-			CourseID: course.ID,
-			Email: row[0],
+		_ = fr.AddPermission(&models.AddCoursePermissionRequest{
+			CourseID:   course.ID,
+			Email:      row[0],
 			Permission: row[1],
 		})
 	}

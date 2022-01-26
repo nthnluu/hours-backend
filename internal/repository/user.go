@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"github.com/golang/glog"
 	"log"
 	"net/http"
 	"signmeup/internal/config"
@@ -11,9 +12,9 @@ import (
 	"strings"
 
 	"cloud.google.com/go/firestore"
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/api/iterator"
-	"github.com/google/uuid"
 
 	firebaseAuth "firebase.google.com/go/auth"
 )
@@ -55,7 +56,7 @@ func (fr *FirebaseRepository) initializeUserProfilesListener() {
 
 // VerifySessionCookie verifies that the given session cookie is valid and returns the associated User if valid.
 func (fr *FirebaseRepository) VerifySessionCookie(sessionCookie *http.Cookie) (*models.User, error) {
-	decoded, err := fr.authClient.VerifySessionCookieAndCheckRevoked(firebase.FirebaseContext, sessionCookie.Value)
+	decoded, err := fr.authClient.VerifySessionCookieAndCheckRevoked(firebase.Context, sessionCookie.Value)
 
 	if err != nil {
 		return nil, fmt.Errorf("error verifying cookie: %v\n", err)
@@ -74,7 +75,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 		return nil, err
 	}
 
-	fbUser, err := fr.authClient.GetUser(firebase.FirebaseContext, id)
+	fbUser, err := fr.authClient.GetUser(firebase.Context, id)
 	if err != nil {
 		return nil, qerrors.UserNotFoundError
 	}
@@ -86,7 +87,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 		domain := strings.Split(fbUser.Email, "@")[1]
 		if !contains(config.Config.AllowedEmailDomains, domain) {
 			// invalid email domain, delete the user from Firebase Auth
-			_ = fr.authClient.DeleteUser(firebase.FirebaseContext, fbUser.UID)
+			_ = fr.authClient.DeleteUser(firebase.Context, fbUser.UID)
 			return nil, qerrors.InvalidEmailError
 		}
 	}
@@ -101,7 +102,7 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 			// if there are no registered users, make the first one an admin
 			IsAdmin: fr.getUserCount() == 0,
 		}
-		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
+		_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.Context, map[string]interface{}{
 			"coursePermissions": make(map[string]models.CoursePermission),
 			"displayName":       profile.DisplayName,
 			"email":             profile.Email,
@@ -110,22 +111,22 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 			"pronouns":          "",
 			"id":                fbUser.UID,
 			"isAdmin":           profile.IsAdmin,
-			"notifications": 	 make([]models.Notification, 0),
+			"notifications":     make([]models.Notification, 0),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error creating user profile: %v\n", err)
 		}
 
 		// Go through each of the invites and execute them.
-		iter := fr.firestoreClient.Collection(models.FirestoreInvitesCollection).Where("email", "==", fbUser.Email).Documents(firebase.FirebaseContext)
+		iter := fr.firestoreClient.Collection(models.FirestoreInvitesCollection).Where("email", "==", fbUser.Email).Documents(firebase.Context)
 		for {
 			// Get this document.
 			doc, err := iter.Next()
 			if err == iterator.Done {
-					break
+				break
 			}
 			if err != nil {
-					return nil, err
+				return nil, err
 			}
 			// Decode this document.
 			var invite models.CourseInvite
@@ -134,13 +135,20 @@ func (fr *FirebaseRepository) GetUserByID(id string) (*models.User, error) {
 				return nil, err
 			}
 			// Execute the invite.
-			fr.AddPermission(&models.AddCoursePermissionRequest{
-				CourseID: invite.CourseID,
-				Email: invite.Email,
+			err = fr.AddPermission(&models.AddCoursePermissionRequest{
+				CourseID:   invite.CourseID,
+				Email:      invite.Email,
 				Permission: invite.Permission,
 			})
+			if err != nil {
+				glog.Warningf("there was a problem adding course permission to a user: %v\n", err)
+			}
+
 			// Delete the doc.
-			doc.Ref.Delete(firebase.FirebaseContext)
+			_, err = doc.Ref.Delete(firebase.Context)
+			if err != nil {
+				glog.Warningf("there was a problem deleting invite: %v\n", err)
+			}
 		}
 	}
 
@@ -159,7 +167,7 @@ func (fr *FirebaseRepository) GetUserByEmail(email string) (*models.User, error)
 
 func (fr *FirebaseRepository) GetIDByEmail(email string) (string, error) {
 	// Get user by email.
-	iter := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Where("email", "==", email).Documents(firebase.FirebaseContext)
+	iter := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Where("email", "==", email).Documents(firebase.Context)
 	doc, err := iter.Next()
 	if err != nil {
 		return "", err
@@ -174,7 +182,7 @@ func (fr *FirebaseRepository) UpdateUser(r *models.UpdateUserRequest) error {
 		return qerrors.InvalidDisplayName
 	}
 
-	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(r.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(r.UserID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "displayName",
 			Value: r.DisplayName,
@@ -199,7 +207,7 @@ func (fr *FirebaseRepository) MakeAdminByEmail(u *models.MakeAdminByEmailRequest
 		return err
 	}
 
-	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(user.ID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "isAdmin",
 			Value: u.IsAdmin,
@@ -217,7 +225,7 @@ func (fr *FirebaseRepository) Count() int {
 
 func (fr *FirebaseRepository) List() ([]*models.User, error) {
 	var users []*models.User
-	iter := fr.authClient.Users(firebase.FirebaseContext, "")
+	iter := fr.authClient.Users(firebase.Context, "")
 	for {
 		fbUser, err := iter.Next()
 		if err == iterator.Done {
@@ -240,15 +248,16 @@ func (fr *FirebaseRepository) List() ([]*models.User, error) {
 }
 
 // Operations
+
 func (fr *FirebaseRepository) AddNotification(userID string, notification models.Notification) error {
 	notification.ID = uuid.New().String()
-	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(userID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(userID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "notifications",
 			Value: firestore.ArrayUnion(notification),
 		},
 	})
-	
+
 	return err
 }
 
@@ -257,14 +266,14 @@ func (fr *FirebaseRepository) ClearNotification(c *models.ClearNotificationReque
 	if err != nil {
 		return err
 	}
-	
+
 	newNotifications := make([]models.Notification, 0)
 	for _, v := range user.Notifications {
 		if v.ID != c.NotificationID {
 			newNotifications = append(newNotifications, v)
 		}
 	}
-	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "notifications",
 			Value: newNotifications,
@@ -274,7 +283,7 @@ func (fr *FirebaseRepository) ClearNotification(c *models.ClearNotificationReque
 }
 
 func (fr *FirebaseRepository) ClearAllNotifications(c *models.ClearAllNotificationsRequest) error {
-	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.FirebaseContext, []firestore.Update{
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(c.UserID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "notifications",
 			Value: make([]models.Notification, 0),
@@ -307,7 +316,7 @@ func (fr *FirebaseRepository) Create(user *models.CreateUserRequest) (*models.Us
 
 	// Create a user in Firebase Auth.
 	u := (&firebaseAuth.UserToCreate{}).Email(user.Email).Password(user.Password)
-	fbUser, err := fr.authClient.CreateUser(firebase.FirebaseContext, u)
+	fbUser, err := fr.authClient.CreateUser(firebase.Context, u)
 	if err != nil {
 		return nil, fmt.Errorf("error creating user: %v\n", err)
 	}
@@ -317,7 +326,7 @@ func (fr *FirebaseRepository) Create(user *models.CreateUserRequest) (*models.Us
 		DisplayName: user.DisplayName,
 		Email:       user.Email,
 	}
-	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.FirebaseContext, map[string]interface{}{
+	_, err = fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(fbUser.UID).Set(firebase.Context, map[string]interface{}{
 		"permissions": []string{},
 		"displayName": profile.DisplayName,
 		"email":       profile.Email,
@@ -332,13 +341,13 @@ func (fr *FirebaseRepository) Create(user *models.CreateUserRequest) (*models.Us
 
 func (fr *FirebaseRepository) Delete(id string) error {
 	// Delete account from Firebase Authentication.
-	err := fr.authClient.DeleteUser(firebase.FirebaseContext, id)
+	err := fr.authClient.DeleteUser(firebase.Context, id)
 	if err != nil {
 		return qerrors.DeleteUserError
 	}
 
 	// Delete profile from user_profiles Firestore collection.
-	_, err = fr.firestoreClient.Collection("user_profiles").Doc(id).Delete(firebase.FirebaseContext)
+	_, err = fr.firestoreClient.Collection("user_profiles").Doc(id).Delete(firebase.Context)
 	if err != nil {
 		return qerrors.DeleteUserError
 	}

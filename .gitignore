@@ -1,4 +1,5 @@
 # Secrets
+firebase-config.json
 staging-firebase-config.json
 prod-firebase-config.json
 dev-firebase-config.json

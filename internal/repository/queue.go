@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"google.golang.org/api/iterator"
 	"log"
 	"math/rand"
 	"signmeup/internal/firebase"
@@ -12,7 +13,6 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
-	"google.golang.org/api/iterator"
 )
 
 func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *models.Queue, err error) {
@@ -133,39 +133,39 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	}
 
 	userdata := models.TicketUserdata{
-		UserID: c.CreatedBy.ID,
-		Email: c.CreatedBy.Email,
-		PhotoURL: c.CreatedBy.PhotoURL,
+		UserID:      c.CreatedBy.ID,
+		Email:       c.CreatedBy.Email,
+		PhotoURL:    c.CreatedBy.PhotoURL,
 		DisplayName: c.CreatedBy.DisplayName,
-		Pronouns: c.CreatedBy.Pronouns,
+		Pronouns:    c.CreatedBy.Pronouns,
 	}
 
 	ticket = &models.Ticket{
 		Queue:       queue,
-		User:   	 userdata,
+		User:        userdata,
 		CreatedAt:   time.Now(),
 		Status:      models.StatusWaiting,
 		Description: c.Description,
-		Anonymize: c.Anonymize,
+		Anonymize:   c.Anonymize,
 	}
 
 	// Check that this user is not already in the queue.
 	iter := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Documents(firebase.FirebaseContext)
 	for {
 		// Get next document
-        doc, err := iter.Next()
-        if err == iterator.Done {
-                break
-        }
-        if err != nil {
-                return nil, err
-        }
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
 		// Check if matches user.
 		var ticket models.Ticket
 		err = mapstructure.Decode(doc.Data(), &ticket)
-        if err != nil {
-                return nil, err
-        }
+		if err != nil {
+			return nil, err
+		}
 
 		if ticket.User.UserID == c.CreatedBy.ID && ticket.Status != models.StatusComplete {
 			return nil, fmt.Errorf("error creating ticket: user already active in queue")
@@ -174,7 +174,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Add(firebase.FirebaseContext, map[string]interface{}{
-		"user":   	   ticket.User,
+		"user":        ticket.User,
 		"createdAt":   ticket.CreatedAt,
 		"status":      ticket.Status,
 		"description": ticket.Description,
@@ -224,10 +224,10 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 			Value: c.ClaimedBy.ID,
 		})
 		notif := models.Notification{
-			Title: "You've been claimed!",
-			Body: queue.Course.Code,
+			Title:     "You've been claimed!",
+			Body:      queue.Course.Code,
 			Timestamp: time.Now(),
-			Type: models.NotificationClaimed,
+			Type:      models.NotificationClaimed,
 		}
 		fr.AddNotification(c.OwnerID, notif)
 	}
@@ -290,12 +290,12 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 		}
 		// Add an announcement to the owner of the ticket.
 		notification := models.Notification{
-			Title: c.Announcement,
-			Body: queue.Course.Code,
+			Title:     c.Announcement,
+			Body:      queue.Course.Code,
 			Timestamp: time.Now(),
-			Type: models.NotificationAnnouncement,
+			Type:      models.NotificationAnnouncement,
 		}
-		fr.AddNotification(ticket.User.UserID, notification)
+		_ = fr.AddNotification(ticket.User.UserID, notification)
 	}
 	return nil
 }

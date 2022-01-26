@@ -1,11 +1,11 @@
-# queue backend
-TODO(nthnluu): will write docs
+# Hours backend
+This is the Go backend 
 
 
 ## File structure
 ```
 ├── internal
-│   ├── auth           // package containing code related to authentication
+│   ├── api           // package containing code related to authentication
 │   │   ├── auth.go    // contains public functions for doing auth-related things (such as creating users)
 │   │   ├── errors.go  // contains definitions for possible errors
 │   │   └── models.go  // models relating to authentication

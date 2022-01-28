@@ -32,16 +32,16 @@ const (
 )
 
 type TicketUserdata struct {
-	UserID         string       	 `json:"userID" mapstructure:"userID"`
-	Email          string       	 `json:"email" mapstructure:"email"`
-	PhotoURL       string       	 `json:"photoURL" mapstructure:"photoURL"`
-	DisplayName    string       	 `json:"displayName" mapstructure:"displayName"`
-	Pronouns       string       	 `json:"pronouns" mapstructure:"pronouns"`
+	UserID         string       	 `json:"UserID" mapstructure:"UserID"`
+	Email          string       	 `json:"Email" mapstructure:"Email"`
+	PhotoURL       string       	 `json:"PhotoURL" mapstructure:"PhotoURL"`
+	DisplayName    string       	 `json:"DisplayName" mapstructure:"DisplayName"`
+	Pronouns       string       	 `json:"Pronouns" mapstructure:"Pronouns"`
 }
 
 type Ticket struct {
 	ID          string       	 `json:"id" mapstructure:"id"`
-	User   		TicketUserdata   `json:"userID" mapstructure:"userID"`
+	User   		TicketUserdata   `json:"user" mapstructure:"user"`
 	Queue       *Queue           `json:"queue" mapstructure:"queue"`
 	CreatedAt   time.Time        `json:"createdAt" mapstructure:"createdAt"`
 	ClaimedAt   time.Time    	 `json:"claimedAt,omitempty" mapstructure:"claimedAt"`

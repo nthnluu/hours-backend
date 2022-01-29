@@ -39,8 +39,9 @@ func (fr *FirebaseRepository) initializeCoursesListener() {
 	}
 
 	done := make(chan bool)
+	query := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Query
 	go func() {
-		err := fr.createCollectionInitializer(models.FirestoreCoursesCollection, &done, handleDocs)
+		err := fr.createCollectionInitializer(query, &done, handleDocs)
 		if err != nil {
 			log.Panicf("error creating course collection listner: %v\n", err)
 		}

@@ -345,8 +345,9 @@ func (fr *FirebaseRepository) initializeQueuesListener() {
 	}
 
 	done := make(chan bool)
+	query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Where("endTime", ">", time.Now().AddDate(0, 0, -1))
 	go func() {
-		err := fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDocs)
+		err := fr.createCollectionInitializer(query, &done, handleDocs)
 		if err != nil {
 			log.Panicf("%v collection listener error: %v\n", models.FirestoreQueuesCollection, err)
 		}

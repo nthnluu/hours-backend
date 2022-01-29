@@ -1,8 +1,12 @@
 package repository
 
 import (
+	"cloud.google.com/go/firestore"
 	"fmt"
 	"github.com/golang/glog"
+	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
+	"google.golang.org/api/iterator"
 	"log"
 	"net/http"
 	"signmeup/internal/config"
@@ -10,11 +14,6 @@ import (
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
 	"strings"
-
-	"cloud.google.com/go/firestore"
-	"github.com/google/uuid"
-	"github.com/mitchellh/mapstructure"
-	"google.golang.org/api/iterator"
 
 	firebaseAuth "firebase.google.com/go/auth"
 )
@@ -45,8 +44,9 @@ func (fr *FirebaseRepository) initializeUserProfilesListener() {
 	}
 
 	done := make(chan bool)
+	query := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Query
 	go func() {
-		err := fr.createCollectionInitializer(models.FirestoreUserProfilesCollection, &done, handleDocs)
+		err := fr.createCollectionInitializer(query, &done, handleDocs)
 		if err != nil {
 			log.Panicf("error creating user profiles collection listener: %v\n", err)
 		}

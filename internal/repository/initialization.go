@@ -14,9 +14,9 @@ import (
 // createCollectionInitializer creates a snapshot iterator over the given collection, and when the
 // collection changes, runs a function.
 func (fr *FirebaseRepository) createCollectionInitializer(
-	collection string, done *chan bool, handleDocs func(docs []*firestore.DocumentSnapshot) error) error {
+	query firestore.Query, done *chan bool, handleDocs func(docs []*firestore.DocumentSnapshot) error) error {
 
-	it := fr.firestoreClient.Collection(collection).Snapshots(firebase.Context)
+	it := query.Snapshots(firebase.Context)
 	var doOnce sync.Once
 
 	for {

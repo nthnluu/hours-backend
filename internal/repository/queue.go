@@ -242,6 +242,7 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 			Body:      queue.Course.Code,
 			Timestamp: time.Now(),
 			Type:      models.NotificationClaimed,
+			Data: 	   queue.ID,
 		}
 		err := fr.AddNotification(c.OwnerID, notif)
 		if err != nil {
@@ -311,6 +312,7 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 			Body:      queue.Course.Code,
 			Timestamp: time.Now(),
 			Type:      models.NotificationAnnouncement,
+			Data: 	   queue.ID,
 		}
 		_ = fr.AddNotification(ticket.User.UserID, notification)
 	}

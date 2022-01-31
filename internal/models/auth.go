@@ -50,6 +50,7 @@ type Notification struct {
 	Body       string    		   `json:"body" mapstructure:"body"`
 	Timestamp  time.Time 		   `json:"timestamp" mapstructure:"timestamp"`
 	Type       NotificationType    `json:"type" mapstructure:"type"`
+	Data       string			   `json:"data" mapstructure:"data"`
 }
 
 // CreateUserRequest is the parameter struct for the CreateUser function.

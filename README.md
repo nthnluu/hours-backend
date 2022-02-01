@@ -1,32 +1,26 @@
-# Hours backend
-This is the Go backend 
+<img src="https://i.imgur.com/tNHmFW3.png" alt=""/>
 
+<h1 align="center">Hours Backend</h1>
+
+<div align="center">
+ <b>
+  The Go backend for Hours — a real-time office hour management system used at Brown University.
+ </b>
+</div>
 
 ## File structure
 ```
 ├── internal
-│   ├── api           // package containing code related to authentication
-│   │   ├── auth.go    // contains public functions for doing auth-related things (such as creating users)
-│   │   ├── errors.go  // contains definitions for possible errors
-│   │   └── models.go  // models relating to authentication
-│   │   └── repository.go  // encapsulates the logic to access users from a database
-│   │   └── routes.go     // HTTP route handlers relating to authentication
-│   └── firebase
-│   │   └── firebase.go   // contains a global variable pointing to an initialized firebase app
-│   └── server
-│       └── server.go     // contains the http server. routes exported from a package should be mounted here.
-└── main.go
-```
+│   ├── api   // TODO
+│   └── auth
+│   │   └── middleware.go   // middlewares and helpers for checking user authentication from request.
+│   │   └── permissions.go    // middlewares for checking user permissions.
+│   └── config    // application configuration
+│   └── firebase    // defines global varibles with the initialized Firebase app and context.
+│   └── models    // type definitions 
+│   └── qerrors   // definitions for errors that can be sent back to the client.
+│   └── repository    // encapsulates logic for accessing entities from Firestore.
+│   └── router    // route definitions and handlers.
+│   └── server    // the HTTP server.
 
-## remarks
-- users without a valid @brown.edu email are automatically deleted from Firebase authentication.
-- the first registered user will automatically be made admin.
-- ticket statuses are mapped to ints:
-  - 0: waiting
-  - 1: claimed
-  - 2: missing
-  - 3: complete
-- 
-## todo
-- lots of refactoring to do.
-- firestore collecction listners need concurrency things
+```

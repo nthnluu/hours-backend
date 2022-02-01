@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/golang/glog"
@@ -187,15 +188,26 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	}
 
 	// Add ticket to the queue's ticket array
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-		{
-			Path:  "tickets",
-			Value: append(queue.Tickets, ref.ID),
-		},
+	queueRef := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID)
+	err = fr.firestoreClient.RunTransaction(firebase.Context, func(ctx context.Context, tx *firestore.Transaction) error {
+		doc, err := tx.Get(queueRef)
+		if err != nil {
+			return err
+		}
+		tickets, err := doc.DataAt("tickets")
+		if err != nil {
+			return err
+		}
+		updatedTickets := append(tickets.([]interface{}), ref.ID)
+		return tx.Set(queueRef, map[string]interface{}{
+			"tickets": updatedTickets,
+		}, firestore.MergeAll)
 	})
 	if err != nil {
+		glog.Errorf("error adding ticket to queue: %v\n", err)
 		return nil, fmt.Errorf("error adding ticket to queue: %v", err)
 	}
+
 	return
 }
 
@@ -345,8 +357,9 @@ func (fr *FirebaseRepository) initializeQueuesListener() {
 	}
 
 	done := make(chan bool)
+	query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Where("endTime", ">", time.Now().AddDate(0, 0, -1))
 	go func() {
-		err := fr.createCollectionInitializer(models.FirestoreQueuesCollection, &done, handleDocs)
+		err := fr.createCollectionInitializer(query, &done, handleDocs)
 		if err != nil {
 			log.Panicf("%v collection listener error: %v\n", models.FirestoreQueuesCollection, err)
 		}

@@ -98,6 +98,31 @@ func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
 }
 
 func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
+	// If disabling the cutoff, set all tickets to beforeCutoff = true.
+	if !c.IsCutOff {
+		// Get the tickets that were created after the cutoff.
+		query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Where("beforeCutoff", "==", false)
+		iter := query.Documents(firebase.Context)
+		
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			
+			// Update each ticket.
+			_, err1 := doc.Ref.Update(firebase.Context, []firestore.Update{
+				{
+					Path:  "beforeCutoff",
+					Value: true,
+				},
+			})
+			if err1 != nil {
+				return err1
+			}
+		}
+	}
+
 	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{Path: "isCutOff", Value: c.IsCutOff},
 	})

@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
-	"google.golang.org/api/iterator"
 	"log"
 	"math/rand"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
 	"time"
+
+	"github.com/golang/glog"
+	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
@@ -143,12 +144,13 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	}
 
 	ticket = &models.Ticket{
-		Queue:       queue,
-		User:        userdata,
-		CreatedAt:   time.Now(),
-		Status:      models.StatusWaiting,
-		Description: c.Description,
-		Anonymize:   c.Anonymize,
+		Queue:        queue,
+		User:         userdata,
+		CreatedAt:    time.Now(),
+		Status:       models.StatusWaiting,
+		Description:  c.Description,
+		Anonymize:    c.Anonymize,
+		BeforeCutoff: !queue.IsCutOff,
 	}
 
 	// Check that this user is not already in the queue.
@@ -177,11 +179,12 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Add(firebase.Context, map[string]interface{}{
-		"user":        ticket.User,
-		"createdAt":   ticket.CreatedAt,
-		"status":      ticket.Status,
-		"description": ticket.Description,
-		"anonymize":   ticket.Anonymize,
+		"user":         ticket.User,
+		"createdAt":    ticket.CreatedAt,
+		"status":       ticket.Status,
+		"description":  ticket.Description,
+		"anonymize":    ticket.Anonymize,
+		"beforeCutoff": ticket.BeforeCutoff,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating ticket: %v", err)

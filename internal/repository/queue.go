@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
-	"google.golang.org/api/iterator"
 	"log"
 	"math/rand"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
 	"time"
+
+	"github.com/golang/glog"
+	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
@@ -97,10 +98,40 @@ func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
 }
 
 func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
+	// Change the isCutOff field.
 	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{Path: "isCutOff", Value: c.IsCutOff},
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	
+	// If disabling the cutoff, set all tickets to beforeCutoff = true.
+	if !c.IsCutOff {
+		// Get the tickets that were created after the cutoff.
+		query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Where("beforeCutoff", "==", false)
+		iter := query.Documents(firebase.Context)
+		
+		for { // loop until the iterator is done
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+			
+			// Update each ticket.
+			_, err1 := doc.Ref.Update(firebase.Context, []firestore.Update{
+				{
+					Path:  "beforeCutoff",
+					Value: true,
+				},
+			})
+			if err1 != nil {
+				return err1
+			}
+		}
+	}
+
+	return nil
 }
 
 func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error {
@@ -143,12 +174,13 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	}
 
 	ticket = &models.Ticket{
-		Queue:       queue,
-		User:        userdata,
-		CreatedAt:   time.Now(),
-		Status:      models.StatusWaiting,
-		Description: c.Description,
-		Anonymize:   c.Anonymize,
+		Queue:        queue,
+		User:         userdata,
+		CreatedAt:    time.Now(),
+		Status:       models.StatusWaiting,
+		Description:  c.Description,
+		Anonymize:    c.Anonymize,
+		BeforeCutoff: !queue.IsCutOff,
 	}
 
 	// Check that this user is not already in the queue.
@@ -177,11 +209,12 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 	// Add ticket to the queue's ticket collection
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Add(firebase.Context, map[string]interface{}{
-		"user":        ticket.User,
-		"createdAt":   ticket.CreatedAt,
-		"status":      ticket.Status,
-		"description": ticket.Description,
-		"anonymize":   ticket.Anonymize,
+		"user":         ticket.User,
+		"createdAt":    ticket.CreatedAt,
+		"status":       ticket.Status,
+		"description":  ticket.Description,
+		"anonymize":    ticket.Anonymize,
+		"beforeCutoff": ticket.BeforeCutoff,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating ticket: %v", err)

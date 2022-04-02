@@ -40,15 +40,16 @@ type TicketUserdata struct {
 }
 
 type Ticket struct {
-	ID          string       	 `json:"id" mapstructure:"id"`
-	User   		TicketUserdata   `json:"user" mapstructure:"user"`
-	Queue       *Queue           `json:"queue" mapstructure:"queue"`
-	CreatedAt   time.Time        `json:"createdAt" mapstructure:"createdAt"`
-	ClaimedAt   time.Time    	 `json:"claimedAt,omitempty" mapstructure:"claimedAt"`
-	ClaimedBy   string       	 `json:"claimedBy,omitempty" mapstructure:"claimedBy"`
-	Status      TicketStatus     `json:"status" mapstructure:"status"`
-	Description string           `json:"description"`
-	Anonymize 	bool   			 `json:"anonymize"`
+	ID           string       	  `json:"id" mapstructure:"id"`
+	User   		 TicketUserdata   `json:"user" mapstructure:"user"`
+	Queue        *Queue           `json:"queue" mapstructure:"queue"`
+	CreatedAt    time.Time        `json:"createdAt" mapstructure:"createdAt"`
+	ClaimedAt    time.Time    	  `json:"claimedAt,omitempty" mapstructure:"claimedAt"`
+	ClaimedBy    string       	  `json:"claimedBy,omitempty" mapstructure:"claimedBy"`
+	Status       TicketStatus     `json:"status" mapstructure:"status"`
+	Description  string           `json:"description"`
+	Anonymize 	 bool   		  `json:"anonymize"`
+	BeforeCutoff bool			  `json:"beforeCutoff"`
 }
 
 // CreateQueueRequest is the parameter struct to the CreateQueue function.

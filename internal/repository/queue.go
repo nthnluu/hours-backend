@@ -257,24 +257,41 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 
 func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error {
 	// Validate that this is a valid queue.
-	_, err := fr.GetQueue(c.QueueID)
+	queue, err := fr.GetQueue(c.QueueID)
 	if err != nil {
 		return qerrors.InvalidQueueError
 	}
 
-	// Remove ticket from tickets.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.Context)
-	if err != nil {
-		return err
+	// If this ticket is equal to CutoffTicketID on the Queue, move the CutoffTicketID to the previous ticket.
+	if c.ID == queue.CutoffTicketID {
+		// Get the index of the ticket to be deleted.
+		ticketIndex := queue.Tickets.IndexOf(c.ID)
+		if ticketIndex == -1 {
+			// This ticket is not in the queue.
+			return qerrors.InvalidTicketError
+		} else if ticketIndex == 0 {
+			// If this is the first ticket, set the cutoff ticket to nil.
+			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+				{ Path:  "cutoffTicketID", Value: nil },
+				{ Path: "tickets", Value: firestore.ArrayRemove(c.ID) }, // Remove the ticket from the queue's tickets array.
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			// Otherwise, set the cutoff ticket to the previous ticket.
+			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+				{ Path:  "cutoffTicketID", Value: queue.Tickets[ticketIndex-1] },
+				{ Path: "tickets", Value: firestore.ArrayRemove(c.ID) }, // Remove the ticket from the queue's tickets array.
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	// Remove ticket from queue.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-		{
-			Path:  "tickets",
-			Value: firestore.ArrayRemove(c.ID),
-		},
-	})
+	// Remove ticket from tickets.
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.Context)
 	return err
 }
 

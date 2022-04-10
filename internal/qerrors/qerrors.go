@@ -17,4 +17,5 @@ var (
 
 	// Queue errors
 	InvalidQueueError = errors.New("the provided queue is not valid")
+	InvalidTicketError = errors.New("the provided ticket is not valid")
 )

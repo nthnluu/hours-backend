@@ -119,6 +119,10 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 			Path:  "tickets",
 			Value: q.Tickets,
 		},
+		{
+			Path:  "isCutOff",
+			Value: false,
+		}
 	})
 
 	if err != nil {

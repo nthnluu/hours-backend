@@ -99,6 +99,7 @@ func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
 func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
 	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{Path: "isCutOff", Value: c.IsCutOff},
+		{Path: "cutoffTicketID", Value: c.CutoffTicketID},
 	})
 	return err
 }

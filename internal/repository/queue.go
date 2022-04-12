@@ -122,7 +122,7 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 		{
 			Path:  "isCutOff",
 			Value: false,
-		}
+		},
 	})
 
 	if err != nil {
@@ -269,7 +269,14 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 	// If this ticket is equal to CutoffTicketID on the Queue, move the CutoffTicketID to the previous ticket.
 	if c.ID == queue.CutoffTicketID {
 		// Get the index of the ticket to be deleted.
-		ticketIndex := queue.Tickets.IndexOf(c.ID)
+		ticketIndex := -1
+		for i, ticket := range queue.Tickets {
+			if ticket == c.ID {
+				ticketIndex = i
+				break
+			}
+		}
+
 		if ticketIndex == -1 {
 			// This ticket is not in the queue.
 			return qerrors.InvalidTicketError

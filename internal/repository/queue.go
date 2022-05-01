@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
-	"google.golang.org/api/iterator"
 	"log"
 	"math/rand"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
 	"time"
+
+	"github.com/golang/glog"
+	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
@@ -283,8 +284,8 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 		} else if ticketIndex == 0 {
 			// If this is the first ticket, set the cutoff ticket to nil.
 			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-				{ Path:  "cutoffTicketID", Value: nil },
-				{ Path: "tickets", Value: firestore.ArrayRemove(c.ID) }, // Remove the ticket from the queue's tickets array.
+				{Path: "cutoffTicketID", Value: nil},
+				{Path: "tickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the queue's tickets array.
 			})
 			if err != nil {
 				return err
@@ -292,12 +293,20 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 		} else {
 			// Otherwise, set the cutoff ticket to the previous ticket.
 			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-				{ Path:  "cutoffTicketID", Value: queue.Tickets[ticketIndex-1] },
-				{ Path: "tickets", Value: firestore.ArrayRemove(c.ID) }, // Remove the ticket from the queue's tickets array.
+				{Path: "cutoffTicketID", Value: queue.Tickets[ticketIndex-1]},
+				{Path: "tickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the queue's tickets array.
 			})
 			if err != nil {
 				return err
 			}
+		}
+	} else {
+		// Otherwise, just remove the ticket from the queue's tickets array.
+		_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+			{Path: "tickets", Value: firestore.ArrayRemove(c.ID)},
+		})
+		if err != nil {
+			return err
 		}
 	}
 

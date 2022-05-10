@@ -247,6 +247,21 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 		if err != nil {
 			glog.Warningf("error sending claim notification: %v\n", err)
 		}
+	} else if c.Status == models.StatusComplete {
+		updates = append(updates, firestore.Update{
+			Path: "completedAt",
+			Value: time.Now(),
+		})
+		notif := models.Notification{
+			Title:     "You've been met with!",
+			Body:      queue.Course.Code,
+			Timestamp: time.Now(),
+			Type:      models.NotificationComplete,
+		}
+		err := fr.AddNotification(c.OwnerID, notif)
+		if err != nil {
+			glog.Warningf("error sending claim notification: %v\n", err)
+		}
 	}
 
 	// Edit ticket in collection.

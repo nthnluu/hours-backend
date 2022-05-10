@@ -46,6 +46,7 @@ type Ticket struct {
 	CreatedAt   time.Time        `json:"createdAt" mapstructure:"createdAt"`
 	ClaimedAt   time.Time    	 `json:"claimedAt,omitempty" mapstructure:"claimedAt"`
 	ClaimedBy   string       	 `json:"claimedBy,omitempty" mapstructure:"claimedBy"`
+	CompletedAt time.Time		 `json:"completedAt,omitempty" mapstructure:"completedAt"`
 	Status      TicketStatus     `json:"status" mapstructure:"status"`
 	Description string           `json:"description"`
 	Anonymize 	bool   			 `json:"anonymize"`

@@ -17,6 +17,7 @@ type NotificationType string
 
 const (
 	NotificationClaimed NotificationType = "CLAIMED"
+	NotificationComplete NotificationType = "COMPLETE"
 	NotificationAnnouncement NotificationType = "ANNOUNCEMENT"
 )
 

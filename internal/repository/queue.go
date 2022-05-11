@@ -170,6 +170,10 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 			return nil, err
 		}
 
+		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status == models.StatusComplete) && (time.Now().Sub(ticket.CompletedAt).Hours() < 0.25) {
+			return nil, fmt.Errorf("error creating ticket: user already made a ticket 15 minutes ago")
+		}
+
 		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status != models.StatusComplete) {
 			return nil, fmt.Errorf("error creating ticket: user already active in queue")
 		}

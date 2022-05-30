@@ -176,6 +176,10 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 			return nil, err
 		}
 
+		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status == models.StatusComplete) && (time.Now().Sub(ticket.CompletedAt).Hours() < 0.25) {
+			return nil, fmt.Errorf("error creating ticket: user already made a ticket 15 minutes ago")
+		}
+
 		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status != models.StatusComplete) {
 			return nil, fmt.Errorf("error creating ticket: user already active in queue")
 		}
@@ -248,6 +252,21 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 			Body:      queue.Course.Code,
 			Timestamp: time.Now(),
 			Type:      models.NotificationClaimed,
+		}
+		err := fr.AddNotification(c.OwnerID, notif)
+		if err != nil {
+			glog.Warningf("error sending claim notification: %v\n", err)
+		}
+	} else if c.Status == models.StatusComplete {
+		updates = append(updates, firestore.Update{
+			Path: "completedAt",
+			Value: time.Now(),
+		})
+		notif := models.Notification{
+			Title:     "You've been met with!",
+			Body:      queue.Course.Code,
+			Timestamp: time.Now(),
+			Type:      models.NotificationComplete,
 		}
 		err := fr.AddNotification(c.OwnerID, notif)
 		if err != nil {

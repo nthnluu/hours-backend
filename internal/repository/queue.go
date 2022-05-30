@@ -197,20 +197,29 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		return nil, fmt.Errorf("error creating ticket: %v", err)
 	}
 
-	// Add ticket to the queue's ticket array
+	// Add ticket to the queue's ticket array and the queue's visible tickets array
 	queueRef := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID)
 	err = fr.firestoreClient.RunTransaction(firebase.Context, func(ctx context.Context, tx *firestore.Transaction) error {
 		doc, err := tx.Get(queueRef)
 		if err != nil {
 			return err
 		}
+
 		tickets, err := doc.DataAt("tickets")
 		if err != nil {
 			return err
 		}
 		updatedTickets := append(tickets.([]interface{}), ref.ID)
+
+		visibleTickets, err := doc.DataAt("visibleTickets")
+		if err != nil {
+			return err
+		}
+		updatedVisibleTickets := append(visibleTickets.([]interface{}), ref.ID)
+
 		return tx.Set(queueRef, map[string]interface{}{
-			"tickets": updatedTickets,
+			"tickets":        updatedTickets,
+			"visibleTickets": updatedVisibleTickets,
 		}, firestore.MergeAll)
 	})
 	if err != nil {
@@ -267,7 +276,7 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 		if queue.CutoffTicketID == c.ID {
 			// Get the index of the ticket to be marked as completed.
 			ticketIndex := -1
-			for i, ticket := range queue.Tickets {
+			for i, ticket := range queue.VisibleTickets {
 				if ticket == c.ID {
 					ticketIndex = i
 					break
@@ -281,6 +290,7 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 				// If this is the first ticket, set the cutoff ticket to nil.
 				_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 					{Path: "cutoffTicketID", Value: nil},
+					{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the visible tickets array.
 				})
 				if err != nil {
 					return err
@@ -289,10 +299,19 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 				// Otherwise, set the cutoff ticket to the previous ticket.
 				_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 					{Path: "cutoffTicketID", Value: queue.Tickets[ticketIndex-1]},
+					{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the visible tickets array.
 				})
 				if err != nil {
 					return err
 				}
+			}
+		} else {
+			// Otherwise, just remove the ticket from the visible tickets array.
+			_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+				{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
+			})
+			if err != nil {
+				return err
 			}
 		}
 
@@ -325,7 +344,7 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 	if c.ID == queue.CutoffTicketID {
 		// Get the index of the ticket to be deleted.
 		ticketIndex := -1
-		for i, ticket := range queue.Tickets {
+		for i, ticket := range queue.VisibleTickets {
 			if ticket == c.ID {
 				ticketIndex = i
 				break
@@ -340,6 +359,7 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 				{Path: "cutoffTicketID", Value: nil},
 				{Path: "tickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the queue's tickets array.
+				{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
 			})
 			if err != nil {
 				return err
@@ -349,6 +369,7 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 				{Path: "cutoffTicketID", Value: queue.Tickets[ticketIndex-1]},
 				{Path: "tickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the queue's tickets array.
+				{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
 			})
 			if err != nil {
 				return err
@@ -358,13 +379,14 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 		// Otherwise, just remove the ticket from the queue's tickets array.
 		_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 			{Path: "tickets", Value: firestore.ArrayRemove(c.ID)},
+			{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
 		})
 		if err != nil {
 			return err
 		}
 	}
 
-	// Remove ticket from tickets.
+	// Remove ticket from tickets collection.
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Delete(firebase.Context)
 	return err
 }

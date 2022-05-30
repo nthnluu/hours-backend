@@ -259,9 +259,44 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 		}
 	} else if c.Status == models.StatusComplete {
 		updates = append(updates, firestore.Update{
-			Path: "completedAt",
+			Path:  "completedAt",
 			Value: time.Now(),
 		})
+
+		// If this ticket is equal to CutoffTicketID on the Queue, move the CutoffTicketID to the previous ticket.
+		if queue.CutoffTicketID == c.ID {
+			// Get the index of the ticket to be marked as completed.
+			ticketIndex := -1
+			for i, ticket := range queue.Tickets {
+				if ticket == c.ID {
+					ticketIndex = i
+					break
+				}
+			}
+
+			if ticketIndex == -1 {
+				// This ticket is not in the queue.
+				return qerrors.InvalidTicketError
+			} else if ticketIndex == 0 {
+				// If this is the first ticket, set the cutoff ticket to nil.
+				_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+					{Path: "cutoffTicketID", Value: nil},
+				})
+				if err != nil {
+					return err
+				}
+			} else {
+				// Otherwise, set the cutoff ticket to the previous ticket.
+				_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+					{Path: "cutoffTicketID", Value: queue.Tickets[ticketIndex-1]},
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Send notification to owner
 		notif := models.Notification{
 			Title:     "You've been met with!",
 			Body:      queue.Course.Code,

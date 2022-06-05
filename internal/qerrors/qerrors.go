@@ -18,4 +18,6 @@ var (
 	// Queue errors
 	InvalidQueueError = errors.New("the provided queue is not valid")
 	InvalidTicketError = errors.New("the provided ticket is not valid")
+	QueueCooldownError = errors.New("user already made a ticket within the last 15 minutes")
+	ActiveTicketError  = errors.New("User already has an active ticket in queue")
 )

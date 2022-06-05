@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -199,29 +198,9 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	}
 
 	// Add ticket to the queue's ticket array and the queue's visible tickets array
-	queueRef := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID)
-	err = fr.firestoreClient.RunTransaction(firebase.Context, func(ctx context.Context, tx *firestore.Transaction) error {
-		doc, err := tx.Get(queueRef)
-		if err != nil {
-			return err
-		}
-
-		tickets, err := doc.DataAt("tickets")
-		if err != nil {
-			return err
-		}
-		updatedTickets := append(tickets.([]interface{}), ref.ID)
-
-		visibleTickets, err := doc.DataAt("visibleTickets")
-		if err != nil {
-			return err
-		}
-		updatedVisibleTickets := append(visibleTickets.([]interface{}), ref.ID)
-
-		return tx.Set(queueRef, map[string]interface{}{
-			"tickets":        updatedTickets,
-			"visibleTickets": updatedVisibleTickets,
-		}, firestore.MergeAll)
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+		{Path: "tickets", Value: firestore.ArrayUnion(ref.ID)},
+		{Path: "visibleTickets", Value: firestore.ArrayUnion(ref.ID)},
 	})
 	if err != nil {
 		glog.Errorf("error adding ticket to queue: %v\n", err)

@@ -16,5 +16,7 @@ var (
 	InvalidDisplayName = errors.New("invalid display name provided")
 
 	// Queue errors
-	InvalidQueueError = errors.New("the provided queue is not valid")
+	InvalidQueueError  = errors.New("the provided queue is not valid")
+	QueueCooldownError = errors.New("user already made a ticket within the last 15 minutes")
+	ActiveTicketError  = errors.New("User already has an active ticket in queue")
 )

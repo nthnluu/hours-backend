@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
-	"google.golang.org/api/iterator"
 	"log"
 	"math/rand"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
 	"time"
+
+	"github.com/golang/glog"
+	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/firestore"
 	"github.com/mitchellh/mapstructure"
@@ -171,11 +172,11 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		}
 
 		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status == models.StatusComplete) && (time.Now().Sub(ticket.CompletedAt).Hours() < 0.25) {
-			return nil, fmt.Errorf("error creating ticket: user already made a ticket 15 minutes ago")
+			return nil, qerrors.QueueCooldownError
 		}
 
 		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status != models.StatusComplete) {
-			return nil, fmt.Errorf("error creating ticket: user already active in queue")
+			return nil, qerrors.ActiveTicketError
 		}
 	}
 
@@ -253,7 +254,7 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 		}
 	} else if c.Status == models.StatusComplete {
 		updates = append(updates, firestore.Update{
-			Path: "completedAt",
+			Path:  "completedAt",
 			Value: time.Now(),
 		})
 		notif := models.Notification{

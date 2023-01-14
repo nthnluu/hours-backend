@@ -21,6 +21,7 @@ type Queue struct {
 	CutoffTicketID     string    `json:"cutoffTicketID" mapstructure:"cutoffTicketID,omitempty"`
 	Tickets            []string  `json:"tickets" mapstructure:"tickets"`
 	VisibleTickets     []string  `json:"visibleTickets" mapstructure:"visibleTickets"`
+	RequireFaceMasks   bool      `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
 }
 
 type TicketStatus string
@@ -63,6 +64,7 @@ type CreateQueueRequest struct {
 	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
 	EndTime            time.Time `json:"endTime"`
 	CourseID           string    `json:"courseID"`
+	RequireFaceMasks   bool      `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
 }
 
 // EditQueueRequest is the parameter struct to the EditQueue function.
@@ -75,6 +77,7 @@ type EditQueueRequest struct {
 	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
 	EndTime            time.Time `json:"endTime"`
 	IsCutOff           bool      `json:"isCutOff"`
+	RequireFaceMasks   bool      `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
 }
 
 // DeleteQueueRequest is the parameter struct to the CreateQueue function.

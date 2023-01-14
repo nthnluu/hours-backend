@@ -51,6 +51,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		"isCutOff":           queue.IsCutOff,
 		"allowTicketEditing": queue.AllowTicketEditing,
 		"showMeetingLinks":   queue.ShowMeetingLinks,
+		"requireFaceMasks":   queue.RequireFaceMasks,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -85,6 +86,10 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 		}, {
 			Path:  "allowTicketEditing",
 			Value: c.AllowTicketEditing,
+		},
+		{
+			Path:  "requireFaceMasks",
+			Value: c.RequireFaceMasks,
 		},
 	})
 	return err

@@ -33,6 +33,7 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		ShowMeetingLinks:   c.ShowMeetingLinks,
 		Course:             queueCourse,
 		IsCutOff:           false,
+		RequireFaceMasks:   queue.RequireFaceMasks,
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.Context, map[string]interface{}{

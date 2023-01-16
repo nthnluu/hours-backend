@@ -33,7 +33,8 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		ShowMeetingLinks:   c.ShowMeetingLinks,
 		Course:             queueCourse,
 		IsCutOff:           false,
-		RequireFaceMasks:   c.RequireFaceMasks,
+		FaceMaskPolicy:     c.FaceMaskPolicy,
+		RejoinCooldown:     c.RejoinCooldown,
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.Context, map[string]interface{}{
@@ -52,7 +53,8 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		"isCutOff":           queue.IsCutOff,
 		"allowTicketEditing": queue.AllowTicketEditing,
 		"showMeetingLinks":   queue.ShowMeetingLinks,
-		"requireFaceMasks":   queue.RequireFaceMasks,
+		"faceMaskPolicy":     queue.FaceMaskPolicy,
+		"rejoinCooldown":     queue.RejoinCooldown,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -89,8 +91,12 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 			Value: c.AllowTicketEditing,
 		},
 		{
-			Path:  "requireFaceMasks",
-			Value: c.RequireFaceMasks,
+			Path:  "faceMaskPolicy",
+			Value: c.FaceMaskPolicy,
+		},
+		{
+			Path:  "rejoinCooldown",
+			Value: c.RejoinCooldown,
 		},
 	})
 	return err

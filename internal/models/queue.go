@@ -24,7 +24,6 @@ type Queue struct {
 	CourseID           string     `json:"courseID" mapstructure:"courseID"`
 	Course             *Course    `json:"course" mapstructure:"course,omitempty"`
 	IsCutOff           bool       `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
-	CutoffTicketID     string     `json:"cutoffTicketID" mapstructure:"cutoffTicketID,omitempty"`
 	PendingTickets     []string   `json:"pendingTickets" mapstructure:"pendingTickets"`
 	CompletedTickets   []string   `json:"completedTickets" mapstructure:"completedTickets"`
 	FaceMaskPolicy     MaskPolicy `json:"faceMaskPolicy" mapstructure:"faceMaskPolicy"`
@@ -96,9 +95,8 @@ type DeleteQueueRequest struct {
 
 // CutoffQueueRequest is the parameter struct to the CutoffQueue function.
 type CutoffQueueRequest struct {
-	IsCutOff       bool   `json:"isCutOff"`
-	CutoffTicketID string `json:"cutoffTicketID"`
-	QueueID        string `json:",omitempty"`
+	IsCutOff bool   `json:"isCutOff"`
+	QueueID  string `json:",omitempty"`
 }
 
 type ShuffleQueueRequest struct {

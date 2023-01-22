@@ -429,6 +429,33 @@ func (fr *FirebaseRepository) GetQueue(ID string) (*models.Queue, error) {
 	}
 }
 
+func (fr *FirebaseRepository) GetQueuesInRange(rangeStart time.Time, rangeEnd time.Time) ([]*models.Queue, error) {
+	query := fr.firestoreClient.Collection(
+		models.FirestoreQueuesCollection).Where("startTime", ">=", rangeStart).Where("startTime", "<=", rangeEnd)
+
+	iter := query.Documents(firebase.Context)
+	var queues []*models.Queue
+
+	for {
+		queueObj, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error listing queues in range: %s", err)
+		}
+
+		var queue *models.Queue
+		if err := mapstructure.Decode(queueObj.Data(), queue); err != nil {
+			return nil, fmt.Errorf("error decoding queue object into queue model: %s", err)
+		}
+
+		queues = append(queues, queue)
+	}
+
+	return queues, nil
+}
+
 // initializeQueuesListener starts a snapshot listener
 func (fr *FirebaseRepository) initializeQueuesListener() {
 	handleDocs := func(docs []*firestore.DocumentSnapshot) error {

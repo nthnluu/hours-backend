@@ -8,20 +8,21 @@ var (
 )
 
 type Queue struct {
-	ID                 string    `json:"id" mapstructure:"id"`
-	Title              string    `json:"title" mapstructure:"title"`
-	Description        string    `json:"code" mapstructure:"code"`
-	Location           string    `json:"location" mapstructure:"location"`
-	EndTime            time.Time `json:"endTime" mapstructure:"endTime"`
-	ShowMeetingLinks   bool      `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
-	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
-	CourseID           string    `json:"courseID" mapstructure:"courseID"`
-	Course             *Course   `json:"course" mapstructure:"course,omitempty"`
-	IsCutOff           bool      `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
-	CutoffTicketID     string    `json:"cutoffTicketID" mapstructure:"cutoffTicketID,omitempty"`
-	Tickets            []string  `json:"tickets" mapstructure:"tickets"`
-	VisibleTickets     []string  `json:"visibleTickets" mapstructure:"visibleTickets"`
-	RequireFaceMasks   bool      `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
+	ID                 string          `json:"id" mapstructure:"id"`
+	Title              string          `json:"title" mapstructure:"title"`
+	Description        string          `json:"code" mapstructure:"code"`
+	Location           string          `json:"location" mapstructure:"location"`
+	EndTime            time.Time       `json:"endTime" mapstructure:"endTime"`
+	ShowMeetingLinks   bool            `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
+	AllowTicketEditing bool            `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
+	CourseID           string          `json:"courseID" mapstructure:"courseID"`
+	Course             *Course         `json:"course" mapstructure:"course,omitempty"`
+	IsCutOff           bool            `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
+	CutoffTicketID     string          `json:"cutoffTicketID" mapstructure:"cutoffTicketID,omitempty"`
+	Tickets            []string        `json:"tickets" mapstructure:"tickets"`
+	VisibleTickets     []string        `json:"visibleTickets" mapstructure:"visibleTickets"`
+	RequireFaceMasks   bool            `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
+	Analytics          *QueueAnalytics `json:"analytics" mapstructure:"analytics"`
 }
 
 type TicketStatus string

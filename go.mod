@@ -13,6 +13,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/rs/cors v1.8.2
+	golang.org/x/sync v0.1.0 // indirect
 	google.golang.org/api v0.65.0
 	google.golang.org/grpc v1.40.1
 )

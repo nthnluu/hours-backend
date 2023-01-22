@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
@@ -123,14 +121,16 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 		return qerrors.InvalidQueueError
 	}
 
-	rand.Shuffle(len(q.Tickets), func(i, j int) {
-		q.Tickets[i], q.Tickets[j] = q.Tickets[j], q.Tickets[i]
+	rand.Shuffle(len(q.PendingTickets), func(i, j int) {
+		q.PendingTickets[i], q.PendingTickets[j] = q.PendingTickets[j], q.PendingTickets[i]
 	})
 
+	// TODO: This shuffle operation is not atomic. It reads the current PendingTickets array, shuffles it, and writes
+	// it back.
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{
 			Path:  "tickets",
-			Value: q.Tickets,
+			Value: q.PendingTickets,
 		},
 		{
 			Path:  "isCutOff",
@@ -149,6 +149,7 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	// Get the queue that this ticket belongs to.
 	queue, err := fr.GetQueue(c.QueueID)
 	if err != nil {
+		fmt.Println(err)
 		return nil, qerrors.InvalidQueueError
 	}
 
@@ -188,7 +189,14 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 			return nil, err
 		}
 
-		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status == models.StatusComplete) && (time.Now().Sub(ticket.CompletedAt).Hours() < 0.25) {
+		// Check if any ticket violates the queue cooldown.
+		createdByCurrentUser := ticket.User.UserID == c.CreatedBy.ID
+		ticketIsComplete := ticket.Status == models.StatusComplete
+		canNeverRejoin := queue.RejoinCooldown == -1
+		cooldownNotElapsed := time.Now().Sub(ticket.CompletedAt).Minutes() < float64(queue.RejoinCooldown)
+
+		if createdByCurrentUser && ticketIsComplete && (canNeverRejoin || cooldownNotElapsed) {
+			fmt.Println(time.Now().Sub(ticket.CompletedAt).Minutes())
 			return nil, qerrors.QueueCooldownError
 		}
 
@@ -268,7 +276,7 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 		if queue.CutoffTicketID == c.ID {
 			// Get the index of the ticket to be marked as completed.
 			ticketIndex := -1
-			for i, ticket := range queue.VisibleTickets {
+			for i, ticket := range queue.PendingTickets {
 				if ticket == c.ID {
 					ticketIndex = i
 					break
@@ -290,8 +298,8 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 			} else {
 				// Otherwise, set the cutoff ticket to the previous ticket.
 				_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-					{Path: "cutoffTicketID", Value: queue.VisibleTickets[ticketIndex-1]},
-					{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the visible tickets array.
+					{Path: "cutoffTicketID", Value: queue.PendingTickets[ticketIndex-1]},
+					{Path: "pendingTickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the pending tickets array.
 				})
 				if err != nil {
 					return err
@@ -336,7 +344,7 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 	if c.ID == queue.CutoffTicketID {
 		// Get the index of the ticket to be deleted.
 		ticketIndex := -1
-		for i, ticket := range queue.VisibleTickets {
+		for i, ticket := range queue.PendingTickets {
 			if ticket == c.ID {
 				ticketIndex = i
 				break
@@ -359,7 +367,7 @@ func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error 
 		} else {
 			// Otherwise, set the cutoff ticket to the previous ticket.
 			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-				{Path: "cutoffTicketID", Value: queue.VisibleTickets[ticketIndex-1]},
+				{Path: "cutoffTicketID", Value: queue.PendingTickets[ticketIndex-1]},
 				{Path: "tickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the queue's tickets array.
 				{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
 			})
@@ -395,7 +403,7 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 		return qerrors.InvalidBody
 	}
 
-	for _, ticketID := range queue.Tickets {
+	for _, ticketID := range queue.PendingTickets {
 		// Get ticket from collection.
 		doc, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(ticketID).Get(firebase.Context)
 		if err != nil {
@@ -425,50 +433,22 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 
 // GetQueue gets the Queue from the queues map corresponding to the provided queue ID.
 func (fr *FirebaseRepository) GetQueue(ID string) (*models.Queue, error) {
-	fr.queuesLock.RLock()
-	defer fr.queuesLock.RUnlock()
-
-	if val, ok := fr.queues[ID]; ok {
-		return val, nil
-	} else {
-		return nil, errors.New("queue not found")
-	}
-}
-
-// initializeQueuesListener starts a snapshot listener
-func (fr *FirebaseRepository) initializeQueuesListener() {
-	handleDocs := func(docs []*firestore.DocumentSnapshot) error {
-		newQueues := make(map[string]*models.Queue)
-		for _, doc := range docs {
-			if !doc.Exists() {
-				continue
-			}
-
-			var c models.Queue
-			err := mapstructure.Decode(doc.Data(), &c)
-			if err != nil {
-				log.Panicf("Error destructuring document: %v", err)
-				return err
-			}
-
-			c.ID = doc.Ref.ID
-			newQueues[doc.Ref.ID] = &c
-		}
-
-		fr.queuesLock.Lock()
-		defer fr.queuesLock.Unlock()
-		fr.queues = newQueues
-
-		return nil
+	doc, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(ID).Get(firebase.Context)
+	if err != nil {
+		return nil, err
 	}
 
-	done := make(chan bool)
-	query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Where("endTime", ">", time.Now().AddDate(0, 0, -1))
-	go func() {
-		err := fr.createCollectionInitializer(query, &done, handleDocs)
-		if err != nil {
-			log.Panicf("%v collection listener error: %v\n", models.FirestoreQueuesCollection, err)
-		}
-	}()
-	<-done
+	if !doc.Exists() {
+		return nil, qerrors.QueueNotFoundError
+	}
+
+	var c models.Queue
+	err = mapstructure.Decode(doc.Data(), &c)
+	if err != nil {
+		glog.Fatalf("Error destructuring queue document: %v", err)
+		return nil, qerrors.QueueNotFoundError
+	}
+
+	c.ID = doc.Ref.ID
+	return &c, nil
 }

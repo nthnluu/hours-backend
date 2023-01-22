@@ -29,18 +29,12 @@ type FirebaseRepository struct {
 	authClient      *firebaseAuth.Client
 	firestoreClient *firestore.Client
 
-	queuesLock *sync.RWMutex
-	queues     map[string]*models.Queue
-
 	profilesLock *sync.RWMutex
 	profiles     map[string]*models.Profile
 }
 
 func NewFirebaseRepository() (*FirebaseRepository, error) {
 	fr := &FirebaseRepository{
-		queuesLock: &sync.RWMutex{},
-		queues:     make(map[string]*models.Queue),
-
 		profilesLock: &sync.RWMutex{},
 		profiles:     make(map[string]*models.Profile),
 	}
@@ -59,7 +53,7 @@ func NewFirebaseRepository() (*FirebaseRepository, error) {
 
 	// Execute the listeners sequentially, in case later listeners need to utilize data fetched
 	// by previous listeners
-	initFns := []func(){fr.initializeQueuesListener, fr.initializeUserProfilesListener}
+	initFns := []func(){fr.initializeUserProfilesListener}
 	for _, initFn := range initFns {
 		fmt.Println("Something was initialized!")
 		initFn()

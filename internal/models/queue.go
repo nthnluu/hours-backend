@@ -25,8 +25,8 @@ type Queue struct {
 	Course             *Course    `json:"course" mapstructure:"course,omitempty"`
 	IsCutOff           bool       `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
 	CutoffTicketID     string     `json:"cutoffTicketID" mapstructure:"cutoffTicketID,omitempty"`
-	Tickets            []string   `json:"tickets" mapstructure:"tickets"`
-	VisibleTickets     []string   `json:"visibleTickets" mapstructure:"visibleTickets"`
+	PendingTickets     []string   `json:"pendingTickets" mapstructure:"pendingTickets"`
+	CompletedTickets   []string   `json:"completedTickets" mapstructure:"completedTickets"`
 	FaceMaskPolicy     MaskPolicy `json:"faceMaskPolicy" mapstructure:"faceMaskPolicy"`
 	RejoinCooldown     int        `json:"rejoinCooldown" mapstructure:"rejoinCooldown"`
 }

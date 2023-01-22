@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"signmeup/internal/auth"
 	"signmeup/internal/middleware"
+	repo "signmeup/internal/repository"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -46,6 +48,25 @@ func AnalyticsRoutes() *chi.Mux {
 // is, we can't blindly read existing *Analytics objects, since the schema/data we serve might have
 // changed since our last computation.
 func generateAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the start and end dates
+	startDate := time.Now()
+	endDate := time.Now()
+
+	// Find all the queues in that range that do _not_ have analytics data of the current
+	// version (or that do not have any analytics at all)
+	repo.Repository.
+	
+
+	// Generate QueueAnalytics for each of these queues, and write them to each queue object
+
+	// Using the new QueueAnalytics (and any existing ones of the currect version), generate
+	// CourseAnalytics.
+
+	// Wait times: 1, 2, 3. Median: 2
+	// Wait times: 10 15 20. Median 15
+	// Average median: 8.5
+
+	// Total times: 1 2 3 10 15 20. Median 6.5.
 
 }
 

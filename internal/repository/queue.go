@@ -128,7 +128,7 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 	// it back.
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{
-			Path:  "tickets",
+			Path:  "pendingTickets",
 			Value: q.PendingTickets,
 		},
 	})

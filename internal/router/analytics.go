@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"signmeup/internal/analytics"
 	"signmeup/internal/auth"
 	"signmeup/internal/middleware"
 	"signmeup/internal/models"
@@ -11,11 +12,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"golang.org/x/sync/errgroup"
-)
-
-const (
-	QUEUE_ANALYTICS_VERSION  = 1
-	COURSE_ANALYTICS_VERSION = 2
 )
 
 func AnalyticsRoutes() *chi.Mux {
@@ -57,15 +53,15 @@ func AnalyticsRoutes() *chi.Mux {
 // changed since our last computation.
 func generateAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the start and end ranges
+	courseID := r.Context().Value("courseID").(string)
 	rangeStart := time.Now()
 	rangeEnd := time.Now()
-	courseID := r.Context().Value("courseID").(string)
 
 	// Get the existing course analytics from the database
 
 	// Find all the queues in that range that do _not_ have analytics data of the current
 	// version (or that do not have any analytics at all)
-	queues, err := repo.Repository.GetQueuesInRange(rangeStart, rangeEnd)
+	queues, err := repo.Repository.GetQueuesInRange(courseID, rangeStart, rangeEnd)
 	if err != nil {
 		// TODO(neil): Handle error canonically
 	}
@@ -75,12 +71,22 @@ func generateAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for _, queue := range queues {
 		queue := queue
+
 		wg.Go(func() error {
 			// Function that takes the queue and says whether we need to
-			if shouldGenerateAnalytics(queue) {
-				analytics := generateAnalyticsForQueue(queue)
+			if analytics.ShouldGenerateAnalytics(queue) {
+				tickets, err := repo.Repository.GetTicketsForQueue(queue.ID)
+				if err != nil {
+					return err
+				}
+
+				analytics := analytics.GenerateAnalyticsFromTickets(tickets)
 				queue.Analytics = analytics
-				return saveAnalyticsForQueue(queue, analytics)
+
+				err = saveAnalyticsForQueue(queue, analytics)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -93,67 +99,12 @@ func generateAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Using the new QueueAnalytics (and any existing ones of the currect version), generate
 	// CourseAnalytics.
-	courseAnalytics := generateCourseAnalyticsFromQueueAnalytics(queuesToQueueAnalytics(queues))
+	courseAnalytics := analytics.GenerateCourseAnalyticsFromQueues(queues)
 	courseAnalytics.StartRange = rangeStart
 	courseAnalytics.EndRange = rangeEnd
+	courseAnalytics.CourseID = courseID
 
 	// Write the CourseAnalytics to the database
-
-	// Wait times: 1, 2, 3. Median: 2
-	// Wait times: 10 15 20. Median 15
-	// Average median: 8.5
-
-	// Total times: 1 2 3 10 15 20. Median 6.5.
-
-}
-
-// Returns whether the queue has no analytics, or the analytics that it does have is of an old
-// version.
-func shouldGenerateAnalytics(queue *models.Queue) bool {
-	return queue.Analytics == nil || queue.Analytics.Version < QUEUE_ANALYTICS_VERSION
-}
-
-// Uses the queue to generate queue analytics. Does not need/use any Firebase connection.
-func generateAnalyticsFromTickets(tickets []*models.Ticket) *models.QueueAnalytics {
-	var analytics *models.QueueAnalytics
-
-	for _, ticket := range tickets {
-		if ticket.Status == models.StatusClaimed {
-			analytics.StudentsSeen = append(analytics.StudentsSeen, ticket.User.UserID)
-
-			timeToSeen := ticket.ClaimedAt.Sub(ticket.CreatedAt).Seconds()
-			analytics.TimeToSeen = append(analytics.TimeToSeen, int(timeToSeen))
-		} else if ticket.Status == models.StatusWaiting || ticket.Status == models.StatusReturned {
-			analytics.StudentsRemaining = append(analytics.StudentsRemaining, ticket.User.UserID)
-		} else if ticket.Status == models.StatusMissing {
-			analytics.StudentsMissing = append(analytics.StudentsMissing, ticket.User.UserID)
-		} else {
-			// TODO(neil): Handle error
-		}
-
-		analytics.TAs = append(analytics.TAs, ticket.ClaimedBy)
-	}
-
-	return analytics
-}
-
-func queuesToQueueAnalytics(queues []*models.Queue) []*models.QueueAnalytics {
-	var analytics []*models.QueueAnalytics
-
-	for _, queue := range queues {
-		analytics = append(analytics, queue.Analytics)
-	}
-
-	return analytics
-}
-
-func generateCourseAnalyticsFromQueueAnalytics(queueAnalytics []*models.QueueAnalytics) *models.CourseAnalytics {
-	var analytics *models.CourseAnalytics
-
-	for _, queueAnalytics := range queueAnalytics {
-	}
-
-	return nil
 }
 
 // Uses the firebase client to save the given analytics onto the given queue

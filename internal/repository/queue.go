@@ -429,9 +429,11 @@ func (fr *FirebaseRepository) GetQueue(ID string) (*models.Queue, error) {
 	}
 }
 
-func (fr *FirebaseRepository) GetQueuesInRange(rangeStart time.Time, rangeEnd time.Time) ([]*models.Queue, error) {
-	query := fr.firestoreClient.Collection(
-		models.FirestoreQueuesCollection).Where("startTime", ">=", rangeStart).Where("startTime", "<=", rangeEnd)
+func (fr *FirebaseRepository) GetQueuesInRange(courseID string, rangeStart time.Time, rangeEnd time.Time) ([]*models.Queue, error) {
+	query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).
+		Where("startTime", ">=", rangeStart).
+		Where("startTime", "<=", rangeEnd).
+		Where("courseID", "==", courseID)
 
 	iter := query.Documents(firebase.Context)
 	var queues []*models.Queue
@@ -454,6 +456,10 @@ func (fr *FirebaseRepository) GetQueuesInRange(rangeStart time.Time, rangeEnd ti
 	}
 
 	return queues, nil
+}
+
+func (fr *FirebaseRepository) GetTicketsForQueue(queueID string) ([]*models.Ticket, error) {
+	return nil, nil
 }
 
 // initializeQueuesListener starts a snapshot listener

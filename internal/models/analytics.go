@@ -4,9 +4,9 @@ import "time"
 
 // Percentiles is a generic struct for storing percentiles for any distribution of data
 type Percentiles struct {
-	P50 int
-	P90 int
-	P99 int
+	P50 float64
+	P90 float64
+	P99 float64
 }
 
 // QueueAnalytics are added to each document in the queues collection under the analytics field.
@@ -27,14 +27,11 @@ type QueueAnalytics struct {
 	// The length of this field should be equal to StudentsSeen.
 	TimeToSeen []int
 
-	// TAs contains the IDs of all the TAs who claimed at least one ticket in this queue
-	TAs []string
-
 	// The IDs of the students seen (StatusClaimed), remaining (StatusWaiting or StatusReturned),
 	// and missing (StatusMissing).
-	StudentsSeen      []string
-	StudentsRemaining []string
-	StudentsMissing   []string
+	StudentsSeen    []string
+	StudentsUnseen  []string
+	StudentsMissing []string
 }
 
 // CourseAnalytics are stored within a separate analytics collection, and are created using a mix
@@ -55,7 +52,7 @@ type CourseAnalytics struct {
 	// The aggregate number of students who were seen, remaining, and missing over all queues
 	// in the time range. Absolute numbers are given here, and the client can compute percentages
 	// if needed.
-	StudentsSeen     int
-	StudensRemaining int
-	StudentsMissing  int
+	NumStudentsSeen    int
+	NumStudentsUnseen  int
+	NumStudentsMissing int
 }

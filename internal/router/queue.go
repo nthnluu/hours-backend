@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/json"
+	"github.com/golang/glog"
 	"log"
 	"net/http"
 	"signmeup/internal/auth"
@@ -50,6 +51,7 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		glog.Errorf("Bad request: %v\n", err)
 		return
 	}
 	req.CourseID = r.Context().Value("courseID").(string)
@@ -57,6 +59,7 @@ func createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	queue, err := repo.Repository.CreateQueue(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		glog.Errorf("Bad request: %v\n", err)
 		return
 	}
 
@@ -82,6 +85,7 @@ func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		glog.Errorf("Bad request: %v\n", err)
 		return
 	}
 	req.QueueID = r.Context().Value("queueID").(string)
@@ -89,6 +93,7 @@ func editQueueHandler(w http.ResponseWriter, r *http.Request) {
 	err = repo.Repository.EditQueue(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		glog.Errorf("Bad request: %v\n", err)
 		return
 	}
 
@@ -150,7 +155,7 @@ func createTicketHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	req.QueueID = chi.URLParam(r, "queueID")
 	req.CreatedBy = user
 
@@ -171,13 +176,13 @@ func editTicketHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 	}
-	
+
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	req.QueueID = chi.URLParam(r, "queueID")
 	req.ClaimedBy = user
 

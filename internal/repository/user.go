@@ -355,6 +355,28 @@ func (fr *FirebaseRepository) Delete(id string) error {
 	return nil
 }
 
+func (fr *FirebaseRepository) AddFavoriteCourse(userID string, courseID string) error {
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(userID).Update(firebase.Context, []firestore.Update{
+		{
+			Path:  "favoriteCourses",
+			Value: firestore.ArrayUnion(courseID),
+		},
+	})
+
+	return err
+}
+
+func (fr *FirebaseRepository) RemoveFavoriteCourse(userID string, courseID string) error {
+	_, err := fr.firestoreClient.Collection(models.FirestoreUserProfilesCollection).Doc(userID).Update(firebase.Context, []firestore.Update{
+		{
+			Path:  "favoriteCourses",
+			Value: firestore.ArrayRemove(courseID),
+		},
+	})
+
+	return err
+}
+
 // Helpers
 
 // fbUserToUserRecord combines a Firebase UserRecord and a Profile into a User

@@ -7,21 +7,27 @@ var (
 	FirestoreTicketsCollection = "tickets"
 )
 
+// MaskPolicy is an integer between 0 and 3 that determines the face mask policy for a queue.
+// 0: No mask policy
+// 1: Face masks recommended
+// 2: Face masks required
+type MaskPolicy int
+
 type Queue struct {
-	ID                 string    `json:"id" mapstructure:"id"`
-	Title              string    `json:"title" mapstructure:"title"`
-	Description        string    `json:"code" mapstructure:"code"`
-	Location           string    `json:"location" mapstructure:"location"`
-	EndTime            time.Time `json:"endTime" mapstructure:"endTime"`
-	ShowMeetingLinks   bool      `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
-	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
-	CourseID           string    `json:"courseID" mapstructure:"courseID"`
-	Course             *Course   `json:"course" mapstructure:"course,omitempty"`
-	IsCutOff           bool      `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
-	CutoffTicketID     string    `json:"cutoffTicketID" mapstructure:"cutoffTicketID,omitempty"`
-	Tickets            []string  `json:"tickets" mapstructure:"tickets"`
-	VisibleTickets     []string  `json:"visibleTickets" mapstructure:"visibleTickets"`
-	RequireFaceMasks   bool      `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
+	ID                 string     `json:"id" mapstructure:"id"`
+	Title              string     `json:"title" mapstructure:"title"`
+	Description        string     `json:"code" mapstructure:"code"`
+	Location           string     `json:"location" mapstructure:"location"`
+	EndTime            time.Time  `json:"endTime" mapstructure:"endTime"`
+	ShowMeetingLinks   bool       `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
+	AllowTicketEditing bool       `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
+	CourseID           string     `json:"courseID" mapstructure:"courseID"`
+	Course             *Course    `json:"course" mapstructure:"course,omitempty"`
+	IsCutOff           bool       `json:"isCutOff" mapstructure:"isCutOff,omitempty"`
+	PendingTickets     []string   `json:"pendingTickets" mapstructure:"pendingTickets"`
+	CompletedTickets   []string   `json:"completedTickets" mapstructure:"completedTickets"`
+	FaceMaskPolicy     MaskPolicy `json:"faceMaskPolicy" mapstructure:"faceMaskPolicy"`
+	RejoinCooldown     int        `json:"rejoinCooldown" mapstructure:"rejoinCooldown"`
 }
 
 type TicketStatus string
@@ -57,27 +63,29 @@ type Ticket struct {
 
 // CreateQueueRequest is the parameter struct to the CreateQueue function.
 type CreateQueueRequest struct {
-	Title              string    `json:"title"`
-	Description        string    `json:"description"`
-	Location           string    `json:"location"`
-	ShowMeetingLinks   bool      `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
-	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
-	EndTime            time.Time `json:"endTime"`
-	CourseID           string    `json:"courseID"`
-	RequireFaceMasks   bool      `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
+	Title              string     `json:"title"`
+	Description        string     `json:"description"`
+	Location           string     `json:"location"`
+	ShowMeetingLinks   bool       `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
+	AllowTicketEditing bool       `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
+	EndTime            time.Time  `json:"endTime"`
+	CourseID           string     `json:"courseID"`
+	FaceMaskPolicy     MaskPolicy `json:"faceMaskPolicy" mapstructure:"faceMaskPolicy"`
+	RejoinCooldown     int        `json:"rejoinCooldown" mapstructure:"rejoinCooldown"`
 }
 
 // EditQueueRequest is the parameter struct to the EditQueue function.
 type EditQueueRequest struct {
-	QueueID            string    `json:"queueID,omitempty"`
-	Title              string    `json:"title"`
-	Description        string    `json:"description"`
-	Location           string    `json:"location"`
-	ShowMeetingLinks   bool      `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
-	AllowTicketEditing bool      `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
-	EndTime            time.Time `json:"endTime"`
-	IsCutOff           bool      `json:"isCutOff"`
-	RequireFaceMasks   bool      `json:"requireFaceMasks" mapstructure:"requireFaceMasks"`
+	QueueID            string     `json:"queueID,omitempty"`
+	Title              string     `json:"title"`
+	Description        string     `json:"description"`
+	Location           string     `json:"location"`
+	ShowMeetingLinks   bool       `json:"showMeetingLinks" mapstructure:"showMeetingLinks"`
+	AllowTicketEditing bool       `json:"allowTicketEditing" mapstructure:"allowTicketEditing"`
+	EndTime            time.Time  `json:"endTime"`
+	IsCutOff           bool       `json:"isCutOff"`
+	FaceMaskPolicy     MaskPolicy `json:"faceMaskPolicy" mapstructure:"faceMaskPolicy"`
+	RejoinCooldown     int        `json:"rejoinCooldown" mapstructure:"rejoinCooldown"`
 }
 
 // DeleteQueueRequest is the parameter struct to the CreateQueue function.
@@ -87,9 +95,8 @@ type DeleteQueueRequest struct {
 
 // CutoffQueueRequest is the parameter struct to the CutoffQueue function.
 type CutoffQueueRequest struct {
-	IsCutOff       bool   `json:"isCutOff"`
-	CutoffTicketID string `json:"cutoffTicketID"`
-	QueueID        string `json:",omitempty"`
+	IsCutOff bool   `json:"isCutOff"`
+	QueueID  string `json:",omitempty"`
 }
 
 type ShuffleQueueRequest struct {

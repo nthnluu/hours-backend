@@ -33,6 +33,10 @@ func AuthRoutes() *chi.Mux {
 		// Notification clearing
 		r.Post("/clearNotification", clearNotificationHandler)
 		r.Post("/clearAllNotifications", clearAllNotificationsHandler)
+
+		// Favorite courses
+		r.Post("/addFavoriteCourses", addFavoriteCourseHandler)
+		r.Post("/removeFavoriteCourses", removeFavoriteCourseHandler)
 	})
 
 	// Alter the current session. No auth middlewares required.
@@ -252,4 +256,56 @@ func clearAllNotificationsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte("Successfully cleared notification"))
+}
+
+// POST: add a favorite course
+func addFavoriteCourseHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
+
+	var req *models.AddFavoriteCourseRequest
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		glog.Warningln(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = repo.Repository.AddFavoriteCourse(user.ID, req.CourseID)
+	if err != nil {
+		glog.Warningln(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully added favorite course"))
+}
+
+// DELETE: remove a favorite course
+func removeFavoriteCourseHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := auth.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
+
+	var req *models.RemoveFavoriteCourseRequest
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		glog.Warningln(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = repo.Repository.RemoveFavoriteCourse(user.ID, req.CourseID)
+	if err != nil {
+		glog.Warningln(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte("Successfully removed favorite course"))
 }

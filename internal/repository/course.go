@@ -222,3 +222,23 @@ func (fr *FirebaseRepository) BulkUpload(c *models.BulkUploadRequest) error {
 	}
 	return nil
 }
+
+// DeleteCoursesByTerm deletes all courses within the given term.
+func (fr *FirebaseRepository) DeleteCoursesByTerm(term string) error {
+	iter := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Where("term", "==", term).Documents(firebase.Context)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		_, err = doc.Ref.Delete(firebase.Context)
+		if err != nil {
+			glog.Fatalf("Error deleting course document: %v", err)
+			return err
+		}
+	}
+	return nil
+}

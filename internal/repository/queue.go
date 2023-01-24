@@ -144,7 +144,6 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 	// Get the queue that this ticket belongs to.
 	queue, err := fr.GetQueue(c.QueueID)
 	if err != nil {
-		fmt.Println(err)
 		return nil, qerrors.InvalidQueueError
 	}
 

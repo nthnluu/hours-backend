@@ -284,7 +284,7 @@ func addFavoriteCourseHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Successfully added favorite course"))
 }
 
-// DELETE: remove a favorite course
+// POST: remove a favorite course
 func removeFavoriteCourseHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := auth.GetUserFromRequest(r)
 	if err != nil {

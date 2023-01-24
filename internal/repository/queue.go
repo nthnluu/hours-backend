@@ -190,7 +190,6 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 		cooldownNotElapsed := time.Now().Sub(ticket.CompletedAt).Minutes() < float64(queue.RejoinCooldown)
 
 		if createdByCurrentUser && ticketIsComplete && (canNeverRejoin || cooldownNotElapsed) {
-			fmt.Println(time.Now().Sub(ticket.CompletedAt).Minutes())
 			return nil, qerrors.QueueCooldownError
 		}
 

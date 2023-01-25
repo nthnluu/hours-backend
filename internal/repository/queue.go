@@ -459,7 +459,30 @@ func (fr *FirebaseRepository) GetQueuesInRange(courseID string, rangeStart time.
 }
 
 func (fr *FirebaseRepository) GetTicketsForQueue(queueID string) ([]*models.Ticket, error) {
-	return nil, nil
+	query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).
+		Doc(queueID).Collection(models.FirestoreTicketsCollection)
+
+	iter := query.Documents(firebase.Context)
+	var tickets []*models.Ticket
+
+	for {
+		ticketObj, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error listing tickets for queue: %s", err)
+		}
+
+		var ticket *models.Ticket
+		if err := mapstructure.Decode(ticketObj.Data(), ticket); err != nil {
+			return nil, fmt.Errorf("error decoding ticket object into ticket model: %s", err)
+		}
+
+		tickets = append(tickets, ticket)
+	}
+
+	return tickets, nil
 }
 
 // initializeQueuesListener starts a snapshot listener

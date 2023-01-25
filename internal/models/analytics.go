@@ -2,6 +2,10 @@ package models
 
 import "time"
 
+const (
+	FirestoreCourseAnalyticsCollection = "course_analytics"
+)
+
 // Percentiles is a generic struct for storing percentiles for any distribution of data
 type Percentiles struct {
 	P50 float64
@@ -37,6 +41,9 @@ type QueueAnalytics struct {
 // CourseAnalytics are stored within a separate analytics collection, and are created using a mix
 // of QueueAnalytics from queues within a certain time interval as well as individual queries.
 type CourseAnalytics struct {
+	// Unique ID among CourseAnalytics documents
+	ID string
+
 	// The CourseID for which these analytics are calculated
 	CourseID string
 

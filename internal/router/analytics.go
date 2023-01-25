@@ -5,7 +5,6 @@ import (
 	"signmeup/internal/analytics"
 	"signmeup/internal/auth"
 	"signmeup/internal/middleware"
-	"signmeup/internal/models"
 	repo "signmeup/internal/repository"
 	"time"
 
@@ -83,7 +82,7 @@ func generateAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 				analytics := analytics.GenerateAnalyticsFromTickets(tickets)
 				queue.Analytics = analytics
 
-				err = saveAnalyticsForQueue(queue, analytics)
+				err = repo.Repository.SaveAnalyticsForQueue(queue, analytics)
 				if err != nil {
 					return err
 				}
@@ -104,13 +103,17 @@ func generateAnalyticsHandler(w http.ResponseWriter, r *http.Request) {
 	courseAnalytics.EndRange = rangeEnd
 	courseAnalytics.CourseID = courseID
 
-	// Write the CourseAnalytics to the database
+	if err := repo.Repository.CreateCourseAnalytics(courseAnalytics); err != nil {
+		// Handle this
+	}
+
+	// Maybe return it
 }
 
 // Uses the firebase client to save the given analytics onto the given queue
-func saveAnalyticsForQueue(queue *models.Queue, analytics *models.QueueAnalytics) error {
-	return nil
-}
+// func saveAnalyticsForQueue(queue *models.Queue, analytics *models.QueueAnalytics) error {
+// 	return nil
+// }
 
 // GET: /course/{courseID}/
 //

@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
@@ -33,6 +31,8 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 		ShowMeetingLinks:   c.ShowMeetingLinks,
 		Course:             queueCourse,
 		IsCutOff:           false,
+		FaceMaskPolicy:     c.FaceMaskPolicy,
+		RejoinCooldown:     c.RejoinCooldown,
 	}
 
 	ref, _, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Add(firebase.Context, map[string]interface{}{
@@ -46,11 +46,13 @@ func (fr *FirebaseRepository) CreateQueue(c *models.CreateQueueRequest) (queue *
 			"title": queue.Course.Title,
 			"code":  queue.Course.Code,
 		},
-		"tickets":            []string{},
-		"visibleTickets":     []string{},
+		"completedTickets":   []string{},
+		"pendingTickets":     []string{},
 		"isCutOff":           queue.IsCutOff,
 		"allowTicketEditing": queue.AllowTicketEditing,
 		"showMeetingLinks":   queue.ShowMeetingLinks,
+		"faceMaskPolicy":     queue.FaceMaskPolicy,
+		"rejoinCooldown":     queue.RejoinCooldown,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating queue: %v", err)
@@ -86,6 +88,14 @@ func (fr *FirebaseRepository) EditQueue(c *models.EditQueueRequest) error {
 			Path:  "allowTicketEditing",
 			Value: c.AllowTicketEditing,
 		},
+		{
+			Path:  "faceMaskPolicy",
+			Value: c.FaceMaskPolicy,
+		},
+		{
+			Path:  "rejoinCooldown",
+			Value: c.RejoinCooldown,
+		},
 	})
 	return err
 }
@@ -100,7 +110,6 @@ func (fr *FirebaseRepository) DeleteQueue(c *models.DeleteQueueRequest) error {
 func (fr *FirebaseRepository) CutoffQueue(c *models.CutoffQueueRequest) error {
 	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{Path: "isCutOff", Value: c.IsCutOff},
-		{Path: "cutoffTicketID", Value: c.CutoffTicketID},
 	})
 	return err
 }
@@ -111,18 +120,16 @@ func (fr *FirebaseRepository) ShuffleQueue(c *models.ShuffleQueueRequest) error 
 		return qerrors.InvalidQueueError
 	}
 
-	rand.Shuffle(len(q.Tickets), func(i, j int) {
-		q.Tickets[i], q.Tickets[j] = q.Tickets[j], q.Tickets[i]
+	rand.Shuffle(len(q.PendingTickets), func(i, j int) {
+		q.PendingTickets[i], q.PendingTickets[j] = q.PendingTickets[j], q.PendingTickets[i]
 	})
 
+	// TODO: This shuffle operation is not atomic. It reads the current PendingTickets array, shuffles it, and writes
+	// it back.
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
 		{
-			Path:  "tickets",
-			Value: q.Tickets,
-		},
-		{
-			Path:  "isCutOff",
-			Value: false,
+			Path:  "pendingTickets",
+			Value: q.PendingTickets,
 		},
 	})
 
@@ -176,11 +183,18 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 			return nil, err
 		}
 
-		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status == models.StatusComplete) && (time.Now().Sub(ticket.CompletedAt).Hours() < 0.25) {
+		// Check if any ticket violates the queue cooldown.
+		createdByCurrentUser := ticket.User.UserID == c.CreatedBy.ID
+		ticketIsComplete := ticket.Status == models.StatusComplete
+		canNeverRejoin := queue.RejoinCooldown == -1
+		cooldownNotElapsed := time.Now().Sub(ticket.CompletedAt).Minutes() < float64(queue.RejoinCooldown)
+
+		if createdByCurrentUser && ticketIsComplete && (canNeverRejoin || cooldownNotElapsed) {
 			return nil, qerrors.QueueCooldownError
 		}
 
-		if (ticket.User.UserID == c.CreatedBy.ID) && (ticket.Status != models.StatusComplete) {
+		// Errors if the current user has an incomplete ticket in the queue
+		if createdByCurrentUser && !ticketIsComplete {
 			return nil, qerrors.ActiveTicketError
 		}
 	}
@@ -199,9 +213,9 @@ func (fr *FirebaseRepository) CreateTicket(c *models.CreateTicketRequest) (ticke
 
 	// Add ticket to the queue's ticket array and the queue's visible tickets array
 	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-		{Path: "tickets", Value: firestore.ArrayUnion(ref.ID)},
-		{Path: "visibleTickets", Value: firestore.ArrayUnion(ref.ID)},
+		{Path: "pendingTickets", Value: firestore.ArrayUnion(ref.ID)},
 	})
+
 	if err != nil {
 		glog.Errorf("error adding ticket to queue: %v\n", err)
 		return nil, fmt.Errorf("error adding ticket to queue: %v", err)
@@ -217,7 +231,7 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 		return qerrors.InvalidQueueError
 	}
 
-	updates := []firestore.Update{
+	ticketUpdates := []firestore.Update{
 		{
 			Path:  "status",
 			Value: c.Status,
@@ -228,142 +242,53 @@ func (fr *FirebaseRepository) EditTicket(c *models.EditTicketRequest) error {
 	}
 
 	if c.Status == models.StatusClaimed {
-		updates = append(updates, firestore.Update{
+		// The ticket is being claimed.
+		ticketUpdates = append(ticketUpdates, firestore.Update{
 			Path:  "claimedAt",
 			Value: time.Now(),
 		})
-		updates = append(updates, firestore.Update{
+		ticketUpdates = append(ticketUpdates, firestore.Update{
 			Path:  "claimedBy",
 			Value: c.ClaimedBy.ID,
 		})
-		notif := models.Notification{
+		notification := models.Notification{
 			Title:     "You've been claimed!",
 			Body:      queue.Course.Code,
 			Timestamp: time.Now(),
 			Type:      models.NotificationClaimed,
 		}
-		err := fr.AddNotification(c.OwnerID, notif)
+		err := fr.AddNotification(c.OwnerID, notification)
 		if err != nil {
 			glog.Warningf("error sending claim notification: %v\n", err)
 		}
 	} else if c.Status == models.StatusComplete {
-		updates = append(updates, firestore.Update{
+		// Ticket is being marked complete.
+		ticketUpdates = append(ticketUpdates, firestore.Update{
 			Path:  "completedAt",
 			Value: time.Now(),
 		})
 
-		// If this ticket is equal to CutoffTicketID on the Queue, move the CutoffTicketID to the previous ticket.
-		if queue.CutoffTicketID == c.ID {
-			// Get the index of the ticket to be marked as completed.
-			ticketIndex := -1
-			for i, ticket := range queue.VisibleTickets {
-				if ticket == c.ID {
-					ticketIndex = i
-					break
-				}
-			}
-
-			if ticketIndex == -1 {
-				// This ticket is not in the queue.
-				return qerrors.InvalidTicketError
-			} else if ticketIndex == 0 {
-				// If this is the first ticket, set the cutoff ticket to nil.
-				_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-					{Path: "cutoffTicketID", Value: nil},
-					{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the visible tickets array.
-				})
-				if err != nil {
-					return err
-				}
-			} else {
-				// Otherwise, set the cutoff ticket to the previous ticket.
-				_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-					{Path: "cutoffTicketID", Value: queue.VisibleTickets[ticketIndex-1]},
-					{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the visible tickets array.
-				})
-				if err != nil {
-					return err
-				}
-			}
-		} else {
-			// Otherwise, just remove the ticket from the visible tickets array.
-			_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-				{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		// Send notification to owner
-		notif := models.Notification{
-			Title:     "You've been met with!",
-			Body:      queue.Course.Code,
-			Timestamp: time.Now(),
-			Type:      models.NotificationComplete,
-		}
-		err := fr.AddNotification(c.OwnerID, notif)
-		if err != nil {
-			glog.Warningf("error sending claim notification: %v\n", err)
-		}
-	}
-
-	// Edit ticket in collection.
-	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.Context, updates)
-	return err
-}
-
-func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error {
-	// Validate that this is a valid queue.
-	queue, err := fr.GetQueue(c.QueueID)
-	if err != nil {
-		return qerrors.InvalidQueueError
-	}
-
-	// If this ticket is equal to CutoffTicketID on the Queue, move the CutoffTicketID to the previous ticket.
-	if c.ID == queue.CutoffTicketID {
-		// Get the index of the ticket to be deleted.
-		ticketIndex := -1
-		for i, ticket := range queue.VisibleTickets {
-			if ticket == c.ID {
-				ticketIndex = i
-				break
-			}
-		}
-
-		if ticketIndex == -1 {
-			// This ticket is not in the queue.
-			return qerrors.InvalidTicketError
-		} else if ticketIndex == 0 {
-			// If this is the first ticket, set the cutoff ticket to nil.
-			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-				{Path: "cutoffTicketID", Value: nil},
-				{Path: "tickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the queue's tickets array.
-				{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
-			})
-			if err != nil {
-				return err
-			}
-		} else {
-			// Otherwise, set the cutoff ticket to the previous ticket.
-			_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-				{Path: "cutoffTicketID", Value: queue.VisibleTickets[ticketIndex-1]},
-				{Path: "tickets", Value: firestore.ArrayRemove(c.ID)}, // Remove the ticket from the queue's tickets array.
-				{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
-			})
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		// Otherwise, just remove the ticket from the queue's tickets array.
-		_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
-			{Path: "tickets", Value: firestore.ArrayRemove(c.ID)},
-			{Path: "visibleTickets", Value: firestore.ArrayRemove(c.ID)},
+		// Remove the ticket from the visible tickets array and move it to the completed tickets array.
+		_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+			{Path: "pendingTickets", Value: firestore.ArrayRemove(c.ID)},
+			{Path: "completedTickets", Value: firestore.ArrayUnion(c.ID)},
 		})
 		if err != nil {
 			return err
 		}
+	}
+
+	// Edit ticket in collection.
+	_, err = fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(c.ID).Update(firebase.Context, ticketUpdates)
+	return err
+}
+
+func (fr *FirebaseRepository) DeleteTicket(c *models.DeleteTicketRequest) error {
+	_, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Update(firebase.Context, []firestore.Update{
+		{Path: "pendingTickets", Value: firestore.ArrayRemove(c.ID)},
+	})
+	if err != nil {
+		return err
 	}
 
 	// Remove ticket from tickets collection.
@@ -383,7 +308,7 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 		return qerrors.InvalidBody
 	}
 
-	for _, ticketID := range queue.Tickets {
+	for _, ticketID := range queue.PendingTickets {
 		// Get ticket from collection.
 		doc, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(c.QueueID).Collection(models.FirestoreTicketsCollection).Doc(ticketID).Get(firebase.Context)
 		if err != nil {
@@ -413,50 +338,22 @@ func (fr *FirebaseRepository) MakeAnnouncement(c *models.MakeAnnouncementRequest
 
 // GetQueue gets the Queue from the queues map corresponding to the provided queue ID.
 func (fr *FirebaseRepository) GetQueue(ID string) (*models.Queue, error) {
-	fr.queuesLock.RLock()
-	defer fr.queuesLock.RUnlock()
-
-	if val, ok := fr.queues[ID]; ok {
-		return val, nil
-	} else {
-		return nil, errors.New("queue not found")
-	}
-}
-
-// initializeQueuesListener starts a snapshot listener
-func (fr *FirebaseRepository) initializeQueuesListener() {
-	handleDocs := func(docs []*firestore.DocumentSnapshot) error {
-		newQueues := make(map[string]*models.Queue)
-		for _, doc := range docs {
-			if !doc.Exists() {
-				continue
-			}
-
-			var c models.Queue
-			err := mapstructure.Decode(doc.Data(), &c)
-			if err != nil {
-				log.Panicf("Error destructuring document: %v", err)
-				return err
-			}
-
-			c.ID = doc.Ref.ID
-			newQueues[doc.Ref.ID] = &c
-		}
-
-		fr.queuesLock.Lock()
-		defer fr.queuesLock.Unlock()
-		fr.queues = newQueues
-
-		return nil
+	doc, err := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Doc(ID).Get(firebase.Context)
+	if err != nil {
+		return nil, err
 	}
 
-	done := make(chan bool)
-	query := fr.firestoreClient.Collection(models.FirestoreQueuesCollection).Where("endTime", ">", time.Now().AddDate(0, 0, -1))
-	go func() {
-		err := fr.createCollectionInitializer(query, &done, handleDocs)
-		if err != nil {
-			log.Panicf("%v collection listener error: %v\n", models.FirestoreQueuesCollection, err)
-		}
-	}()
-	<-done
+	if !doc.Exists() {
+		return nil, qerrors.QueueNotFoundError
+	}
+
+	var c models.Queue
+	err = mapstructure.Decode(doc.Data(), &c)
+	if err != nil {
+		glog.Fatalf("Error destructuring queue document: %v", err)
+		return nil, qerrors.QueueNotFoundError
+	}
+
+	c.ID = doc.Ref.ID
+	return &c, nil
 }

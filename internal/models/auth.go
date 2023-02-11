@@ -16,8 +16,7 @@ const (
 type NotificationType string
 
 const (
-	NotificationClaimed NotificationType = "CLAIMED"
-	NotificationComplete NotificationType = "COMPLETE"
+	NotificationClaimed      NotificationType = "CLAIMED"
 	NotificationAnnouncement NotificationType = "ANNOUNCEMENT"
 )
 
@@ -33,7 +32,8 @@ type Profile struct {
 	MeetingLink string `json:"meetingLink,omitempty" mapstructure:"meetingLink" firebase:"meetingLink"`
 	// Map from course ID to CoursePermission
 	CoursePermissions map[string]CoursePermission `json:"coursePermissions" mapstructure:"coursePermissions" firebase:"coursePermissions"`
-	Notifications []Notification `json:"notifications" mapstructure:"notifications" firebase:"notifications"`
+	Notifications     []Notification              `json:"notifications" mapstructure:"notifications" firebase:"notifications"`
+	FavoriteCourses   []string                    `json:"favoriteCourses" mapstructure:"favoriteCourses" firebase:"favoriteCourses"`
 }
 
 // User represents a registered user.
@@ -46,11 +46,11 @@ type User struct {
 }
 
 type Notification struct {
-	ID         string    		   `json:"id" mapstructure:"id"`
-	Title      string    		   `json:"title" mapstructure:"title"`
-	Body       string    		   `json:"body" mapstructure:"body"`
-	Timestamp  time.Time 		   `json:"timestamp" mapstructure:"timestamp"`
-	Type       NotificationType    `json:"type" mapstructure:"type"`
+	ID        string           `json:"id" mapstructure:"id"`
+	Title     string           `json:"title" mapstructure:"title"`
+	Body      string           `json:"body" mapstructure:"body"`
+	Timestamp time.Time        `json:"timestamp" mapstructure:"timestamp"`
+	Type      NotificationType `json:"type" mapstructure:"type"`
 }
 
 // CreateUserRequest is the parameter struct for the CreateUser function.
@@ -77,11 +77,21 @@ type MakeAdminByEmailRequest struct {
 
 // ClearNotificationRequest is the parameter struct for the ClearNotification function.
 type ClearNotificationRequest struct {
-	UserID       string       `json:",omitempty"`
+	UserID         string `json:",omitempty"`
 	NotificationID string `json:"notificationId" mapstructure:"notificationId"`
 }
 
-// ClearNotificationRequest is the parameter struct for the ClearNotification function.
+// ClearAllNotificationsRequest is the parameter struct for the ClearNotification function.
 type ClearAllNotificationsRequest struct {
-	UserID       string       `json:",omitempty"`
+	UserID string `json:",omitempty"`
+}
+
+// AddFavoriteCourseRequest is the parameter struct for the AddFavoriteCourseRequest function.
+type AddFavoriteCourseRequest struct {
+	CourseID string `json:"courseID" mapstructure:"courseID"`
+}
+
+// RemoveFavoriteCourseRequest is the parameter struct for the RemoveFavoriteCourseRequest function.
+type RemoveFavoriteCourseRequest struct {
+	CourseID string `json:"courseID" mapstructure:"courseID"`
 }

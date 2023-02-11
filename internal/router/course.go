@@ -7,6 +7,7 @@ import (
 	"signmeup/internal/auth"
 	"signmeup/internal/middleware"
 	"signmeup/internal/models"
+	"signmeup/internal/qerrors"
 	repo "signmeup/internal/repository"
 
 	"github.com/go-chi/chi/v5"
@@ -47,7 +48,11 @@ func getCourseHandler(w http.ResponseWriter, r *http.Request) {
 
 	course, err := repo.Repository.GetCourseByID(courseID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err == qerrors.CourseNotFoundError {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 

@@ -2,7 +2,8 @@ package repository
 
 import (
 	"fmt"
-	"log"
+	"github.com/golang/glog"
+	"google.golang.org/api/iterator"
 	"signmeup/internal/firebase"
 	"signmeup/internal/models"
 	"signmeup/internal/qerrors"
@@ -12,64 +13,51 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func (fr *FirebaseRepository) initializeCoursesListener() {
-	handleDocs := func(docs []*firestore.DocumentSnapshot) error {
-		newCourses := make(map[string]*models.Course)
-		for _, doc := range docs {
-			if !doc.Exists() {
-				continue
-			}
-
-			var c models.Course
-			err := mapstructure.Decode(doc.Data(), &c)
-			if err != nil {
-				log.Panicf("Error destructuring document: %v", err)
-				return err
-			}
-
-			c.ID = doc.Ref.ID
-			newCourses[doc.Ref.ID] = &c
-		}
-
-		fr.coursesLock.Lock()
-		defer fr.coursesLock.Unlock()
-		fr.courses = newCourses
-
-		return nil
-	}
-
-	done := make(chan bool)
-	query := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Query
-	go func() {
-		err := fr.createCollectionInitializer(query, &done, handleDocs)
-		if err != nil {
-			log.Panicf("error creating course collection listner: %v\n", err)
-		}
-	}()
-	<-done
-}
-
 // GetCourseByID gets the Course from the courses map corresponding to the provided course ID.
 func (fr *FirebaseRepository) GetCourseByID(ID string) (*models.Course, error) {
-	fr.coursesLock.RLock()
-	defer fr.coursesLock.RUnlock()
+	doc, err := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Doc(ID).Get(firebase.Context)
+	if err != nil {
+		return nil, err
+	}
 
-	if val, ok := fr.courses[ID]; ok {
-		return val, nil
-	} else {
+	if !doc.Exists() {
 		return nil, qerrors.CourseNotFoundError
 	}
+
+	var c models.Course
+	err = mapstructure.Decode(doc.Data(), &c)
+	if err != nil {
+		glog.Fatalf("Error destructuring course document: %v", err)
+		return nil, qerrors.CourseNotFoundError
+	}
+
+	c.ID = doc.Ref.ID
+	return &c, nil
 }
 
 func (fr *FirebaseRepository) GetCourseByInfo(code string, term string) (*models.Course, error) {
-	fr.coursesLock.RLock()
-	defer fr.coursesLock.RUnlock()
-
-	for _, course := range fr.courses {
-		if course.Code == code && course.Term == term {
-			return course, nil
+	iter := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Where("code", "==", code).Where("term", "==", term).Limit(1).Documents(firebase.Context)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
 		}
+		if err != nil {
+			return nil, qerrors.CourseNotFoundError
+		}
+
+		// Return the first result of the query.
+		var c models.Course
+		err = mapstructure.Decode(doc.Data(), &c)
+		if err != nil {
+			glog.Fatalf("Error destructuring course document: %v", err)
+			return nil, qerrors.CourseNotFoundError
+		}
+
+		c.ID = doc.Ref.ID
+		return &c, nil
 	}
+
 	return nil, qerrors.CourseNotFoundError
 }
 
@@ -231,6 +219,26 @@ func (fr *FirebaseRepository) BulkUpload(c *models.BulkUploadRequest) error {
 			Email:      row[0],
 			Permission: row[1],
 		})
+	}
+	return nil
+}
+
+// DeleteCoursesByTerm deletes all courses within the given term.
+func (fr *FirebaseRepository) DeleteCoursesByTerm(term string) error {
+	iter := fr.firestoreClient.Collection(models.FirestoreCoursesCollection).Where("term", "==", term).Documents(firebase.Context)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		_, err = doc.Ref.Delete(firebase.Context)
+		if err != nil {
+			glog.Fatalf("Error deleting course document: %v", err)
+			return err
+		}
 	}
 	return nil
 }
